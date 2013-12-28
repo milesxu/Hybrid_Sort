@@ -2,6 +2,7 @@
 #include <xmmintrin.h>
 #include <cuda_runtime.h>
 #include <omp.h>
+#include <boost/timer/timer.hpp>
 #include <test/test_util.h>
 #include <cub/util_allocator.cuh>
 #include <cub/device/device_radix_sort.cuh>
@@ -62,6 +63,10 @@ int main(int argc, char **argv)
 
 void gpu_sort_loop(float *data, size_t dataLen, size_t blockLen)
 {
+	boost::timer::cpu_timer timer;
+	boost::timer::auto_cpu_timer t;
+	double begin, end;
+	begin = omp_get_wtime();
 	int blockNum = dataLen / blockLen;
 	size_t blockBytes = sizeof(float) * blockLen;
 	//size_t dataBytes = sizeof(float) * dataLen;
@@ -121,6 +126,9 @@ void gpu_sort_loop(float *data, size_t dataLen, size_t blockLen)
 		resultTest(data + offset, blockLen);
 	for (int i = 0; i < blockNum; ++i)
 		cudaStreamDestroy(streams[i]);
+	end = omp_get_wtime();
+	std::cout << "cpu time for gpu sort loop: " << timer.elapsed().wall << std::endl;
+	std::cout << "timing using openmp function: " << end - begin << std::endl;
 }
 
 void gpu_sort_2(float *data, size_t dataLen, size_t blockLen)
@@ -392,6 +400,7 @@ void gpu_sort(float *data, rsize_t dataLen)
 
 float *cpu_sort_sse_parallel(DoubleBuffer<float> &data, rsize_t dataLen)
 {
+	boost::timer::auto_cpu_timer t;
 	const rsize_t blockSize = cacheSizeInByte() / (cacheFactor * sizeof(float));
     std::cout << "selected block size: " << blockSize << std::endl;
 	if (blockSize)

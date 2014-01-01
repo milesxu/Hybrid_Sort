@@ -86,8 +86,8 @@ void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
 					 rsize_t sortedBlockNum, rsize_t mergeStride,
 					 rsize_t quantileLen, bool initial = false)
 {
-	std::copy(quantile.Current(),
-			  quantile.Current() + sortedBlockNum, bound.buffers[0]);
+	std::copy(quantile.Current(), quantile.Current() + sortedBlockNum,
+			  bound.buffers[0]);
 	if (initial)
 	{
 		for (rsize_t j = 0; j < sortedBlockNum; ++j)
@@ -206,6 +206,56 @@ void multiWayMerge(DoubleBuffer<float> &data, rsize_t dataLen,
     delete [] upperBound;
     delete [] loopUBound;
     delete [] loopLBound;
+}
+
+void multiWayMergeGeneral(DoubleBuffer<float> &data, size_t dataLen,
+						  size_t sortedChunkLen, size_t mergeStride,
+						  size_t startOffset, size_t endOffset)
+{
+	size_t sortedChunkNum = dataLen / sortedChunkLen;
+	size_t *quantileStart = new size_t[sortedChunkNum];
+	size_t *quantileEnd = new size_t[sortedChunkNum];
+	size_t *upperBound = new size_t[sortedChunkNum];
+	size_t *loopUBound = new size_t[sortedChunkNum];
+	size_t *loopLBound = new size_t[sortedChunkNum];
+	DoubleBuffer<size_t> quantile(quantileStart, quantileEnd);
+	DoubleBuffer<size_t> bound(loopLBound, loopUBound);
+	for (size_t j = 0; j < sortedChunkNum; ++j)
+		quantile.buffers[0][j] = sortedChunkLen * j;
+	for (size_t j = 0; j < sortedChunkNum; ++j)
+		upperBound[j] = quantile.buffers[0][j] + sortedChunkLen;
+	float *ptrOut = data.buffers[data.selector ^ 1] + startOffset;
+	if (startOffset)
+	{
+		//ptrOut += startOffset;
+		quantileCompute(data.buffers[data.selector], quantile, bound, upperBound,
+						sortedChunkNum, mergeStride, startOffset, true);
+		std::copy(quantile.buffers[1], quantile.buffers[1] + sortedChunkNum,
+				  quantile.buffers[0]);
+	}
+	else
+	{
+		std::copy(quantile.buffers[0], quantile.buffers[0] + sortedChunkNum,
+				  quantile.buffers[1]);
+	}
+	for (size_t offset = startOffset; offset < endOffset - mergeStride;
+		 offset += mergeStride)
+	{
+		moveBaseQuantile(data, quantile, bound, upperBound, sortedChunkNum,
+						 mergeStride, &ptrOut);
+	}
+	if (endOffset < dataLen)
+		moveBaseQuantile(data, quantile, bound, upperBound, sortedChunkNum,
+						 mergeStride, &ptrOut);
+	else
+		for (size_t j = 0; j < sortedChunkNum; ++j)
+			for (size_t k = quantile.buffers[0][j]; k < upperBound[j]; ++k)
+				*ptrOut++ = data.buffers[data.selector][k];
+	delete [] quantileStart;
+	delete [] quantileEnd;
+	delete [] upperBound;
+	delete [] loopUBound;
+	delete [] loopLBound;
 }
 
 void mergeSort(DoubleBuffer<float> &data, rsize_t dataLen)

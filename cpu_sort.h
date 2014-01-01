@@ -46,5 +46,9 @@ void registerSortIteration(DoubleBuffer<float> &data, rsize_t minStride,
 void multiWayMerge(DoubleBuffer<float> &data, rsize_t dataLen,
 				   rsize_t sortedBlockLen, rsize_t mergeStride,
 				   rsize_t startIndex, rsize_t endIndex);
-
+void multiWayMergeGeneral(DoubleBuffer<float> &data, size_t dataLen,
+						  size_t sortedChunkLen, size_t mergeStride,
+						  size_t startOffset, size_t endOffset);
+	
 #endif /* CPU_SORT_H_ */
+	

@@ -1,0 +1,468 @@
+以下结果在opensuse kernel-desktop中得到：
+
+~/cuda-workspace/hybrid_sort $ cd Release/
+~/cuda-workspace/hybrid_sort/Release $ ./hybrid_sort 
+8
+67108864 1023
+Using device 0: GeForce GTX 765M (PTX version 300, SM300, 4 SMs, 2017 free / 2047 total MB physmem, ECC off)
+cache size selected: 32768
+selected block size on cpu: 2048
+ 0.803887s wall, 0.830000s user + 0.000000s system = 0.830000s CPU (103.2%)
+cache size selected: 32768
+cache factor is: 1block length is: 8192 average time for merge: 0.916913
+cache size selected: 32768
+cache factor is: 2block length is: 4096 average time for merge: 0.825981
+cache size selected: 32768
+cache factor is: 4block length is: 2048 average time for merge: 0.743128
+cache size selected: 32768
+cache factor is: 8block length is: 1024 average time for merge: 0.654696
+~/cuda-workspace/hybrid_sort/Release $ ./hybrid_sort 
+8
+67108864 1023
+Using device 0: GeForce GTX 765M (PTX version 300, SM300, 4 SMs, 2017 free / 2047 total MB physmem, ECC off)
+cache size selected: 32768
+selected block size on cpu: 2048
+ 0.805790s wall, 0.850000s user + 0.000000s system = 0.850000s CPU (105.5%)
+cache size selected: 32768
+cache factor is: 1block length is: 8192 average time for merge: 0.920401
+cache size selected: 32768
+cache factor is: 2block length is: 4096 average time for merge: 0.829736
+cache size selected: 32768
+cache factor is: 4block length is: 2048 average time for merge: 0.741284
+cache size selected: 32768
+cache factor is: 8block length is: 1024 average time for merge: 0.656434
+cache size selected: 32768
+cache factor is: 16block length is: 512 average time for merge: 0.570493
+cache size selected: 32768
+cache factor is: 32block length is: 256 average time for merge: 0.482025
+~/cuda-workspace/hybrid_sort/Release $ 
+以上结果测试的是串行地运行merge block算法，不同的是，block的大小。结果表明，对merge算法影响的主要因素是block的大小，而不是block的数量，所以应考虑保证算法其他部分性能的前提下，使用较小的block大小，而且在multiway算法之后，使用比开头更小的block大小。两者的不同应该会提高算法性能。
+8
+67108864 1023
+Using device 0: GeForce GTX 765M (PTX version 300, SM300, 4 SMs, 2017 free / 2047 total MB physmem, ECC off)
+cache size selected: 32768
+selected block size on cpu: 2048
+ 0.801105s wall, 0.850000s user + 0.000000s system = 0.850000s CPU (106.1%)
+cache size selected: 32768
+cache factor is: 1block length is: 8192 average time for merge: 2.08887
+cache size selected: 32768
+cache factor is: 2block length is: 4096 average time for merge: 2.08289
+cache size selected: 32768
+cache factor is: 4block length is: 2048 average time for merge: 2.08202
+cache size selected: 32768
+cache factor is: 8block length is: 1024 average time for merge: 2.09634
+cache size selected: 32768
+cache factor is: 16block length is: 512 average time for merge: 2.13182
+cache size selected: 32768
+cache factor is: 32block length is: 256 average time for merge: 2.15656
+以上是merge sort加上block间合并两个部分的结果。相减之后得到block间合并的运行时间分别是：1.168469，1.253154,1.340736,1.439906,1.561327,1.674535。意料之中的是，block数量增多，则block之间merge所需的时间变长。按目前串行运行结果来看，cache factor为4是两者权衡后，性能最优值。
+以下是缓存内merge sort在不同的分组大小、以及不同的block大小情况下的运行情况。从结果看出，block大小对缓存内排序的影响在并行状态下减弱，但仍然维持着减小block大小则降低计算时间的趋势。在chunk的大小太大致使线程数量未到达CPU最大线程数量前，chunk的大小对排序的时间影响非常大，但chunk小到足够数量后，如果获得的分组是CPU最大线程数量的整数倍，则对可达到最高性能，此时chunk大小对排序的时间影响就很低了。说明可以用比较小的chunk大小来进行排序。
+8
+67108864 1023
+Using device 0: GeForce GTX 765M (PTX version 300, SM300, 4 SMs, 2017 free / 2047 total MB physmem, ECC off)
+cache size selected: 32768
+selected block size on cpu: 2048
+ 0.795491s wall, 0.830000s user + 0.000000s system = 0.830000s CPU (104.3%)
+cache size selected: 32768
+cache factor is: 1 block length is: 8192
+chunk size is: 67108864 data length is: 67108864 average time for merge: 0.91912
+chunk size is: 33554432 data length is: 67108864 average time for merge: 0.486693
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.24775
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.256977
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.174309
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.186918
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.203507
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.227964
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.165601
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.170621
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.172789
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.180197
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.199743
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.210536
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.219386
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.232904
+cache size selected: 32768
+cache factor is: 2 block length is: 4096
+chunk size is: 67108864 data length is: 67108864 average time for merge: 0.83019
+chunk size is: 33554432 data length is: 67108864 average time for merge: 0.442707
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.225554
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.234255
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.15889
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.17038
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.187008
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.211858
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.148872
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.153968
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.157522
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.164075
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.182631
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.191836
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.202545
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.219357
+cache size selected: 32768
+cache factor is: 4 block length is: 2048
+chunk size is: 67108864 data length is: 67108864 average time for merge: 0.747548
+chunk size is: 33554432 data length is: 67108864 average time for merge: 0.398258
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.205362
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.212345
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.141225
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.154646
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.167641
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.18799
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.13287
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.139645
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.143338
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.143889
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.162715
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.171688
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.178705
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.189666
+cache size selected: 32768
+cache factor is: 8 block length is: 1024
+chunk size is: 67108864 data length is: 67108864 average time for merge: 0.656252
+chunk size is: 33554432 data length is: 67108864 average time for merge: 0.358028
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.184249
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.189341
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.125875
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.135041
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.147421
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.169079
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.117914
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.121668
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.123751
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.129352
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.145142
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.149592
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.160814
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.166354
+cache size selected: 32768
+cache factor is: 16 block length is: 512
+chunk size is: 67108864 data length is: 67108864 average time for merge: 0.570701
+chunk size is: 33554432 data length is: 67108864 average time for merge: 0.310276
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.160818
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.166627
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.110389
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.119363
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.128531
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.14439
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.103421
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.108355
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.109315
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.113116
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.123825
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.130646
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.138185
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.144975
+cache size selected: 32768
+cache factor is: 32 block length is: 256
+chunk size is: 67108864 data length is: 67108864 average time for merge: 0.487251
+chunk size is: 33554432 data length is: 67108864 average time for merge: 0.265322
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.1358
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.147134
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.0945607
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.10151
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.111193
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.120799
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.0875762
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.0912467
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.0945104
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.0953401
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.104437
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.111081
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.115701
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.123957
+cache size selected: 32768
+cache factor is: 64 block length is: 128
+chunk size is: 67108864 data length is: 67108864 average time for merge: 0.387165
+chunk size is: 33554432 data length is: 67108864 average time for merge: 0.212687
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.109799
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.11868
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.0766825
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.0822685
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.0897224
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.0964838
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.0707252
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.0751364
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.0758591
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.0774116
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.0851278
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.0898697
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.0948851
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.0999488
+以下是缓存内排序加上合并的过程。可以看出，chunk的大小也会对合并产生影响，但线程数量对合并的影响并不太规律，中间有一段没有大的变化，但chunk大小变小对合并影响的趋势是时间减少。但block大小的合并的影响产生的仍然是反作用，block变小，合并的时间将变长。总的时间竟然没有太大变化，性能最高的时候竟然是block为最大值、chunk为最小值的情况。也许继续降低chunk大小才能提高这两个部分的综合性能。
+~/cuda-workspace/hybrid_sort/Release $ ./hybrid_sort 
+8
+67108864 1023
+Using device 0: GeForce GTX 765M (PTX version 300, SM300, 4 SMs, 2017 free / 2047 total MB physmem, ECC off)
+cache size selected: 32768
+selected block size on cpu: 2048
+ 0.786732s wall, 0.820000s user + 0.000000s system = 0.820000s CPU (104.2%)
+cache size selected: 32768
+cache factor is: 1 block length is: 8192
+chunk size is: 67108864 data length is: 67108864 average time for merge: 2.09265
+chunk size is: 33554432 data length is: 67108864 average time for merge: 1.05356
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.588733
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.701094
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.410754
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.472931
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.548714
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.631338
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.386273
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.399879
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.420782
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.4391
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.473814
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.500381
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.538567
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.580517
+cache size selected: 32768
+cache factor is: 2 block length is: 4096
+chunk size is: 67108864 data length is: 67108864 average time for merge: 2.0918
+chunk size is: 33554432 data length is: 67108864 average time for merge: 1.05622
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.59736
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.719049
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.422236
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.491487
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.552852
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.66002
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.399904
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.412146
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.434303
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.458178
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.49662
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.528176
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.562708
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.603823
+cache size selected: 32768
+cache factor is: 4 block length is: 2048
+chunk size is: 67108864 data length is: 67108864 average time for merge: 2.07545
+chunk size is: 33554432 data length is: 67108864 average time for merge: 1.03659
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.596902
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.718368
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.425974
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.490601
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.572045
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.655591
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.407455
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.424598
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.445244
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.475201
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.514222
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.544235
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.58062
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.621772
+cache size selected: 32768
+cache factor is: 8 block length is: 1024
+chunk size is: 67108864 data length is: 67108864 average time for merge: 2.0898
+chunk size is: 33554432 data length is: 67108864 average time for merge: 1.05147
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.605295
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.734926
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.437639
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.506575
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.589041
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.691027
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.422249
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.433473
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.456193
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.487589
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.527793
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.562276
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.599604
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.641975
+cache size selected: 32768
+cache factor is: 16 block length is: 512
+chunk size is: 67108864 data length is: 67108864 average time for merge: 2.1304
+chunk size is: 33554432 data length is: 67108864 average time for merge: 1.08524
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.629332
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.773615
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.462019
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.539963
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.62904
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.720721
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.436158
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.451007
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.47729
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.503452
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.546306
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.582017
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.621248
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.66347
+cache size selected: 32768
+cache factor is: 32 block length is: 256
+chunk size is: 67108864 data length is: 67108864 average time for merge: 2.1566
+chunk size is: 33554432 data length is: 67108864 average time for merge: 1.09542
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.639681
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.793271
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.475254
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.554001
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.648141
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.745882
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.451599
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.464668
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.487042
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.520059
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.563853
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.603129
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.644905
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.686318
+cache size selected: 32768
+cache factor is: 64 block length is: 128
+chunk size is: 67108864 data length is: 67108864 average time for merge: 2.16871
+chunk size is: 33554432 data length is: 67108864 average time for merge: 1.11048
+chunk size is: 16777216 data length is: 50331648 average time for merge: 0.646732
+chunk size is: 16777216 data length is: 67108864 average time for merge: 0.808172
+chunk size is: 8388608 data length is: 41943040 average time for merge: 0.486099
+chunk size is: 8388608 data length is: 50331648 average time for merge: 0.569189
+chunk size is: 8388608 data length is: 58720256 average time for merge: 0.670774
+chunk size is: 8388608 data length is: 67108864 average time for merge: 0.766087
+chunk size is: 4194304 data length is: 37748736 average time for merge: 0.462948
+chunk size is: 4194304 data length is: 41943040 average time for merge: 0.471599
+chunk size is: 4194304 data length is: 46137344 average time for merge: 0.503479
+chunk size is: 4194304 data length is: 50331648 average time for merge: 0.538941
+chunk size is: 4194304 data length is: 54525952 average time for merge: 0.580001
+chunk size is: 4194304 data length is: 58720256 average time for merge: 0.623547
+chunk size is: 4194304 data length is: 62914560 average time for merge: 0.668482
+chunk size is: 4194304 data length is: 67108864 average time for merge: 0.712807
+
+下面是对第二步排序中的multi way merge，即计算quantile数组，并据此进行数据拷贝的过程进行的测试。从结果中发现，chunk和block的大小对multi way merge的运算都有影响，其中chunk大小的影响更为明显，表现为chunk大小太大导致线程数少于最大线程数量时，减小chunk大小会大幅提高multi way merge的性能，而在达到最大线程后，继续降低chunk的大小又会显著地使运算时间加长。由此看出，一味地降低chunk的大小是不可取的。在线程数量未达到最大值时，block大小对性能的影响并不明显，但当chunk持续减少大小后，block减少也会明显降低multi way merge的性能。可以考虑，在chunk大小合适的前提下，使用可变的block大小，在第一阶段为了使得合并的性能提高，需要使用较大一点的block，而在第二阶段，只要最后的merge过程能够有足够的性能提升，可以适当减小multi way merge输出的block大小。
+~/cuda-workspace/hybrid_sort/Release $ ./hybrid_sort 
+8
+67108864 1023
+Using device 0: GeForce GTX 765M (PTX version 300, SM300, 4 SMs, 2017 free / 2047 total MB physmem, ECC off)
+cache size selected: 32768
+selected block size on cpu: 2048
+cache size selected: 32768
+cache factor is: 1 block length is: 8192
+chunk size is: 67108864 average time for merge: 2.05768 for multi way: 0.076606
+chunk size is: 33554432 average time for merge: 1.03715 for multi way: 0.0459809
+chunk size is: 16777216 average time for merge: 0.692317 for multi way: 0.0425379
+chunk size is: 8388608 average time for merge: 0.620033 for multi way: 0.0421687
+chunk size is: 4194304 average time for merge: 0.576575 for multi way: 0.0448253
+chunk size is: 2097152 average time for merge: 0.522828 for multi way: 0.0550891
+chunk size is: 1048576 average time for merge: 0.471611 for multi way: 0.0983638
+cache size selected: 32768
+cache factor is: 2 block length is: 4096
+chunk size is: 67108864 average time for merge: 2.05825 for multi way: 0.0758435
+chunk size is: 33554432 average time for merge: 1.03814 for multi way: 0.0470952
+chunk size is: 16777216 average time for merge: 0.711597 for multi way: 0.0431474
+chunk size is: 8388608 average time for merge: 0.643027 for multi way: 0.0429882
+chunk size is: 4194304 average time for merge: 0.598387 for multi way: 0.0454451
+chunk size is: 2097152 average time for merge: 0.545002 for multi way: 0.0771396
+chunk size is: 1048576 average time for merge: 0.492671 for multi way: 0.155252
+cache size selected: 32768
+cache factor is: 4 block length is: 2048
+chunk size is: 67108864 average time for merge: 2.06221 for multi way: 0.0759497
+chunk size is: 33554432 average time for merge: 1.04802 for multi way: 0.048682
+chunk size is: 16777216 average time for merge: 0.730287 for multi way: 0.0432062
+chunk size is: 8388608 average time for merge: 0.663259 for multi way: 0.0441254
+chunk size is: 4194304 average time for merge: 0.61728 for multi way: 0.0504086
+chunk size is: 2097152 average time for merge: 0.560828 for multi way: 0.100869
+chunk size is: 1048576 average time for merge: 0.506825 for multi way: 0.226741
+cache size selected: 32768
+cache factor is: 8 block length is: 1024
+chunk size is: 67108864 average time for merge: 2.06856 for multi way: 0.0765422
+chunk size is: 33554432 average time for merge: 1.05385 for multi way: 0.0545177
+chunk size is: 16777216 average time for merge: 0.747647 for multi way: 0.0440748
+chunk size is: 8388608 average time for merge: 0.683525 for multi way: 0.0441462
+chunk size is: 4194304 average time for merge: 0.638974 for multi way: 0.0681523
+chunk size is: 2097152 average time for merge: 0.578149 for multi way: 0.168184
+chunk size is: 1048576 average time for merge: 0.530845 for multi way: 0.356954
+cache size selected: 32768
+cache factor is: 16 block length is: 512
+chunk size is: 67108864 average time for merge: 2.09433 for multi way: 0.0778313
+chunk size is: 33554432 average time for merge: 1.05189 for multi way: 0.0538024
+chunk size is: 16777216 average time for merge: 0.749907 for multi way: 0.0409918
+chunk size is: 8388608 average time for merge: 0.684176 for multi way: 0.0481309
+chunk size is: 4194304 average time for merge: 0.647002 for multi way: 0.0939164
+chunk size is: 2097152 average time for merge: 0.600912 for multi way: 0.211201
+chunk size is: 1048576 average time for merge: 0.548108 for multi way: 0.505834
+cache size selected: 32768
+cache factor is: 32 block length is: 256
+chunk size is: 67108864 average time for merge: 2.08852 for multi way: 0.0794089
+chunk size is: 33554432 average time for merge: 1.06319 for multi way: 0.0520707
+chunk size is: 16777216 average time for merge: 0.767624 for multi way: 0.0438199
+chunk size is: 8388608 average time for merge: 0.705063 for multi way: 0.0730891
+chunk size is: 4194304 average time for merge: 0.666322 for multi way: 0.155514
+chunk size is: 2097152 average time for merge: 0.612668 for multi way: 0.406442
+chunk size is: 1048576 average time for merge: 0.579216 for multi way: 0.852891
+cache size selected: 32768
+cache factor is: 64 block length is: 128
+chunk size is: 67108864 average time for merge: 2.14445 for multi way: 0.0872126
+chunk size is: 33554432 average time for merge: 1.09435 for multi way: 0.0623436
+chunk size is: 16777216 average time for merge: 0.800438 for multi way: 0.0586079
+chunk size is: 8388608 average time for merge: 0.750248 for multi way: 0.101817
+chunk size is: 4194304 average time for merge: 0.702751 for multi way: 0.229587
+chunk size is: 2097152 average time for merge: 0.650344 for multi way: 0.521058
+chunk size is: 1048576 average time for merge: 0.60246 for multi way: 1.40526
+
+下面是整个第一和第二阶段的性能测试。和之前的一样，在线程数量达到最大之后，merge sort只受block的影响，所以使用可变的block大小从测试结果来看是可行的，在当前机器上测试的结果是block为512时，线程数为8时性能最优。
+~/cuda-workspace/hybrid_sort/Release $ ./hybrid_sort 
+8
+67108864 1023
+Using device 0: GeForce GTX 765M (PTX version 300, SM300, 4 SMs, 2017 free / 2047 total MB physmem, ECC off)
+cache size selected: 32768
+selected block size on cpu: 2048
+successfully sorted!
+cache size selected: 32768
+cache factor is: 1 block length is: 8192
+chunk size is: 67108864 average time for merge: 2.0759 for multi way: 0.954205
+chunk size is: 33554432 average time for merge: 1.05111 for multi way: 0.515011
+chunk size is: 16777216 average time for merge: 0.697046 for multi way: 0.293023
+chunk size is: 8388608 average time for merge: 0.620012 for multi way: 0.262628
+chunk size is: 4194304 average time for merge: 0.57007 for multi way: 0.266041
+chunk size is: 2097152 average time for merge: 0.522759 for multi way: 0.279818
+chunk size is: 1048576 average time for merge: 0.468054 for multi way: 0.327316
+cache size selected: 32768
+cache factor is: 2 block length is: 4096
+chunk size is: 67108864 average time for merge: 2.05668 for multi way: 0.863459
+chunk size is: 33554432 average time for merge: 1.02891 for multi way: 0.464659
+chunk size is: 16777216 average time for merge: 0.697195 for multi way: 0.262909
+chunk size is: 8388608 average time for merge: 0.633452 for multi way: 0.237818
+chunk size is: 4194304 average time for merge: 0.590525 for multi way: 0.249546
+chunk size is: 2097152 average time for merge: 0.539725 for multi way: 0.281025
+chunk size is: 1048576 average time for merge: 0.493876 for multi way: 0.382417
+cache size selected: 32768
+cache factor is: 4 block length is: 2048
+chunk size is: 67108864 average time for merge: 2.08842 for multi way: 0.791484
+chunk size is: 33554432 average time for merge: 1.05603 for multi way: 0.435722
+chunk size is: 16777216 average time for merge: 0.728837 for multi way: 0.255663
+chunk size is: 8388608 average time for merge: 0.652369 for multi way: 0.220183
+chunk size is: 4194304 average time for merge: 0.609063 for multi way: 0.233492
+chunk size is: 2097152 average time for merge: 0.56105 for multi way: 0.282702
+chunk size is: 1048576 average time for merge: 0.507073 for multi way: 0.402705
+cache size selected: 32768
+cache factor is: 8 block length is: 1024
+chunk size is: 67108864 average time for merge: 2.06845 for multi way: 0.701639
+chunk size is: 33554432 average time for merge: 1.03895 for multi way: 0.388728
+chunk size is: 16777216 average time for merge: 0.732634 for multi way: 0.223842
+chunk size is: 8388608 average time for merge: 0.682579 for multi way: 0.209163
+chunk size is: 4194304 average time for merge: 0.640262 for multi way: 0.241701
+chunk size is: 2097152 average time for merge: 0.583255 for multi way: 0.339769
+chunk size is: 1048576 average time for merge: 0.525844 for multi way: 0.535193
+cache size selected: 32768
+cache factor is: 16 block length is: 512
+chunk size is: 67108864 average time for merge: 2.11396 for multi way: 0.627418
+chunk size is: 33554432 average time for merge: 1.05637 for multi way: 0.35159
+chunk size is: 16777216 average time for merge: 0.752142 for multi way: 0.200458
+chunk size is: 8388608 average time for merge: 0.693115 for multi way: 0.186347
+chunk size is: 4194304 average time for merge: 0.649074 for multi way: 0.236358
+chunk size is: 2097152 average time for merge: 0.600771 for multi way: 0.363825
+chunk size is: 1048576 average time for merge: 0.551158 for multi way: 0.691156
+cache size selected: 32768
+cache factor is: 32 block length is: 256
+chunk size is: 67108864 average time for merge: 2.14524 for multi way: 0.548194
+chunk size is: 33554432 average time for merge: 1.09175 for multi way: 0.31035
+chunk size is: 16777216 average time for merge: 0.780648 for multi way: 0.182848
+chunk size is: 8388608 average time for merge: 0.712272 for multi way: 0.194734
+chunk size is: 4194304 average time for merge: 0.668674 for multi way: 0.275312
+chunk size is: 2097152 average time for merge: 0.617521 for multi way: 0.523597
+chunk size is: 1048576 average time for merge: 0.568138 for multi way: 0.945387
+cache size selected: 32768
+cache factor is: 64 block length is: 128
+chunk size is: 67108864 average time for merge: 2.12979 for multi way: 0.454656
+chunk size is: 33554432 average time for merge: 1.10168 for multi way: 0.271524
+chunk size is: 16777216 average time for merge: 0.804752 for multi way: 0.174431
+chunk size is: 8388608 average time for merge: 0.750833 for multi way: 0.213945
+chunk size is: 4194304 average time for merge: 0.705879 for multi way: 0.331116
+chunk size is: 2097152 average time for merge: 0.656215 for multi way: 0.630073
+chunk size is: 1048576 average time for merge: 0.610386 for multi way: 1.52348

@@ -1,8 +1,10 @@
 #include <iostream>
+#include <fstream>
 #include <xmmintrin.h>
 #include <cuda_runtime.h>
 #include <omp.h>
 #include <boost/timer/timer.hpp>
+#include <boost/format.hpp>
 #include <test/test_util.h>
 #include <cub/util_allocator.cuh>
 #include <cub/device/device_radix_sort.cuh>
@@ -31,7 +33,7 @@ int main(int argc, char **argv)
 	//std::cout << dataLen << " " << seed << "\n";
 	args.DeviceInit();
 	//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-	for (int dlf = 23; dlf <= 25; ++dlf)
+	for (int dlf = 20; dlf <= 28; ++dlf)
 	{
 		dataLen = 1 << dlf;
 		std::cout << "data length: " << dataLen << std::endl;
@@ -314,6 +316,9 @@ void multiWayStage(DoubleBuffer<float> &data, size_t dataLen, size_t chunkSize,
 
 void hybrid_sort(float *data, size_t dataLen)
 {
+	std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
+						std::ios::app);
+	if (rFile.is_open()) rFile << "tested data length: " << dataLen << std::endl;
 	float* dataIn = (float*)_mm_malloc(dataLen * sizeof(float), 16);
 	float* dataOut= (float*)_mm_malloc(dataLen * sizeof(float), 16);
 	std::copy(data, data + dataLen, dataIn);
@@ -330,10 +335,16 @@ void hybrid_sort(float *data, size_t dataLen)
 	cudaDeviceSynchronize();*/
 	
 	const int test_time = 50;
+	rFile << boost::format("%1%%|15t|") % "cache factor"
+		  << boost::format("%1%%|15t|") % "block length"
+		  << boost::format("%1%%|15t|") % "chunk size"
+		  << boost::format("%1%%|15t|") % "merge time"
+		  << boost::format("%1%%|15t|") % "multi way"
+		  << boost::format("%1%%|15t|") % "gpu omp"
+		  << boost::format("%1%%|15t|") % "gpu cuda" << std::endl;
 	for (int j = 1; j <= 64; j *= 2)
 	{
 		size_t block_size = cacheSizeInByte() / (j * sizeof(float));
-		std::cout << "cache factor is: " << j << " block length is: " << block_size << std::endl;
 		for (int m = 8; m <= 64; m *= 2)
 		{
 			double merge_time = 0.0, multiway_time = 0.0, gpu_time = 0.0;
@@ -359,12 +370,19 @@ void hybrid_sort(float *data, size_t dataLen)
 				end = omp_get_wtime();
 				multiway_time += (end - start);
 			}
-			std::cout << "chunk size is: " << chunk_size << " average time for merge: " <<
-				merge_time / test_time << " for multi way: " << multiway_time / test_time << " gpu computing(in ms): " << gpu_time * 1000.0 / test_time << std::endl;
-			std::cout << "timing by cuda: " << cuda_time / test_time << std::endl;
+			rFile << boost::format("%1%%|15t|") % j
+				  << boost::format("%1%%|15t|") % block_size
+				  << boost::format("%1%%|15t|") % chunk_size
+				  << boost::format("%1%%|15t|") % (merge_time / test_time)
+				  << boost::format("%1%%|15t|") % (multiway_time / test_time)
+				  << boost::format("%1%%|15t|") % (gpu_time / test_time)
+				  << boost::format("%1%%|15t|") % (cuda_time / test_time)
+				  << std::endl;
 		}
 	}
 	_mm_free(dataIn);
 	_mm_free(dataOut);
+	rFile << std::endl << std::endl;
+	rFile.close();
 }
 

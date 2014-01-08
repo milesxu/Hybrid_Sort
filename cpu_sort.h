@@ -40,7 +40,9 @@ struct DoubleBuffer
 };
 
 void updateMergeSelcetor(int *selector, rsize_t dataLen);
+void updateSelectorGeneral(int &selector, size_t dataLen);
 void mergeSort(DoubleBuffer<float> &data, rsize_t dataLen);
+void mergeSortGeneral(DoubleBuffer<float> &data, rsize_t dataLen);
 void registerSortIteration(DoubleBuffer<float> &data, rsize_t minStride,
 						   rsize_t maxStride, rsize_t dataLen);
 void multiWayMerge(DoubleBuffer<float> &data, rsize_t dataLen,
@@ -49,6 +51,6 @@ void multiWayMerge(DoubleBuffer<float> &data, rsize_t dataLen,
 void multiWayMergeGeneral(DoubleBuffer<float> &data, size_t dataLen,
 						  size_t sortedChunkLen, size_t mergeStride,
 						  size_t startOffset, size_t endOffset);
-	
+
 #endif /* CPU_SORT_H_ */
-	
+

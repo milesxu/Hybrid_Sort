@@ -13,7 +13,7 @@ void sortInRegister(float *data)
         rData[i] = _mm_min_ps(rData[i], rData[i + 1]);
     for (int i = 1; i < rArrayLen; i += 2)
         rData[i] = _mm_max_ps(rData[i], temp[i >> 1]);
-
+	
     for (int i = 0; i < pairSize; i += 2)
     {
         temp[i] = rData[i * 2];

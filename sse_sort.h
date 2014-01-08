@@ -1,6 +1,5 @@
 #ifndef CPU_SORT_INLINE_H
 #define CPU_SORT_INLINE_H
-#include <iostream>
 
 #include <smmintrin.h>
 #include <xmmintrin.h>
@@ -28,7 +27,7 @@ void bitonicSort428(__m128 *data, bool reverse = false)
     if (reverse)
         for (int i = 1; i < simds; i += 2)
             data[i] = _mm_shuffle_ps(data[i], data[i], 0x1b);
-
+	
     for (int i = 0; i < simds; i += 2)
         temp[i >> 1] = _mm_max_ps(data[i], data[i+1]);
     for (int i = 0; i < simds; i += 2)
@@ -37,7 +36,7 @@ void bitonicSort428(__m128 *data, bool reverse = false)
         data[i+1] = _mm_shuffle_ps(data[i], temp[i>>1], 0xee);
     for (int i = 0; i < simds; i += 2)
         data[i] = _mm_shuffle_ps(data[i], temp[i>>1], 0x44);
-
+	
     for (int i = 0; i < simds; i += 2)
         temp[i>>1] = _mm_min_ps(data[i], data[i+1]);
     for (int i = 1; i < simds; i += 2)
@@ -48,7 +47,7 @@ void bitonicSort428(__m128 *data, bool reverse = false)
         data[i] = _mm_blend_ps(data[i], temp[i>>1], 0x6);
     for (int i = 1; i < simds; i += 2)
         data[i] = _mm_shuffle_ps(data[i], data[i], 0xb1);
-
+	
     for (int i = 0; i < simds; i += 2)
         temp[i>>1] = _mm_min_ps(data[i], data[i+1]);
     for (int i = 1; i < simds; i += 2)
@@ -72,14 +71,14 @@ inline void bitonicSort428<1>(__m128 *data, bool reverse)
     data[0] = _mm_min_ps(data[0], data[1]);
     data[1] = _mm_shuffle_ps(data[0], temp, 0xee);
     data[0] = _mm_shuffle_ps(data[0], temp, 0x44);
-
-
+	
+	
     temp = _mm_min_ps(data[0], data[1]);
     data[1] = _mm_max_ps(data[1], data[0]);
     data[0] = _mm_blend_ps(temp, data[1], 0x6);
     data[1] = _mm_blend_ps(data[1], temp, 0x6);
     data[1] = _mm_shuffle_ps(data[1], data[1], 0xb1);
-
+	
     temp = _mm_min_ps(data[0], data[1]);
     data[1] = _mm_max_ps(data[1], data[0]);
     data[0] = _mm_shuffle_ps(temp, data[1], 0x44);
@@ -126,14 +125,14 @@ inline void bitonicSort8216<1>(__m128 *data, bool reverse)
     {
         reverseData(data + 2, 2);
     }
-
+	
     temp[0] = data[2 + reverse];
     temp[1] = data[3 - reverse];
     data[3] = _mm_max_ps(data[0], temp[0]);
     data[2] = _mm_max_ps(data[1], temp[1]);
     data[0] = _mm_min_ps(data[0], temp[0]);
     data[1] = _mm_min_ps(data[1], temp[1]);
-
+	
     bitonicSort428<2>(data);
 }
 

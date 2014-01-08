@@ -14,11 +14,11 @@
 
 const int cacheFactor = 4; //what is the most suitable cache size?
 const size_t chunkFactor = 1;
-const size_t dlFactor = 26;
+const size_t dlFactor = 27;
 
 float gpu_sort(float *data, size_t dataLen, size_t blockLen);
 void gpu_sort_serial(float *data, size_t dataLen, size_t blockLen);
-void gpu_sort(float *data, rsize_t dataLen);
+void gpu_sort_test(float *data, rsize_t dataLen);
 float *cpu_sort_sse_parallel(DoubleBuffer<float> &data, rsize_t dataLen);
 void hybrid_sort(float *data, size_t dataLen);
 
@@ -32,8 +32,13 @@ int main(int argc, char **argv)
 	args.GetCmdLineArgument("s", seed);
 	//std::cout << dataLen << " " << seed << "\n";
 	args.DeviceInit();
+	/*float *data = new float[dataLen];
+	GenerateData(seed, data, dataLen);
+	gpu_sort_test(data, dataLen);
+	gpu_sort_serial(data, dataLen, dataLen);
+	delete [] data;*/
 	//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-	for (int dlf = 20; dlf <= 28; ++dlf)
+	for (int dlf = 20; dlf <= 21; ++dlf)
 	{
 		dataLen = 1 << dlf;
 		std::cout << "data length: " << dataLen << std::endl;
@@ -128,6 +133,7 @@ float gpu_sort(float *data, size_t dataLen, size_t blockLen)
 	cudaEventDestroy(stop);
 	cda.DeviceFree(d_keys.d_buffers[0]);
 	cda.DeviceFree(d_keys.d_buffers[1]);
+	cda.DeviceFree(d_temp_storage);
 	return sort_time;
 }
 
@@ -178,29 +184,78 @@ void gpu_sort_serial(float *data, size_t dataLen, size_t blockLen)
 		resultTest(data + offset, blockLen);
 	cda.DeviceFree(d_keys.d_buffers[0]);
 	cda.DeviceFree(d_keys.d_buffers[1]);
+	cda.DeviceFree(d_temp_storage);
 }
 
-void gpu_sort(float *data, rsize_t dataLen)
+void gpu_sort_test(float *data, rsize_t dataLen)
 {
-    cub::DoubleBuffer<float> d_keys;
+	if (dataLen < (1 << 20) || dataLen > (1 << 28))
+	{
+		std::cout << "data length too short or too long!" << std::endl;
+		return;
+	}
+	std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
+						std::ios::app);
+	rFile << "gpu kernel and transfer test" << std::endl
+		  << boost::format("%1%%|15t|") % "data length"
+		  << boost::format("%1%%|15t|") % "transfer time"
+		  << boost::format("%1%%|15t|") % "kernel time"
+		  << std::endl;
+	cub::DoubleBuffer<float> d_keys;
     cub::CachingDeviceAllocator cda;
     cda.DeviceAllocate((void**)&d_keys.d_buffers[0], sizeof(float) * dataLen);
     cda.DeviceAllocate((void**)&d_keys.d_buffers[1], sizeof(float) * dataLen);
-    void *d_temp_storage = NULL;
-    size_t temp_storage_bytes = 0;
-    cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys,
-								   dataLen);
-    cda.DeviceAllocate(&d_temp_storage, temp_storage_bytes);
-    cudaMemcpy(d_keys.d_buffers[d_keys.selector], data,
-			   sizeof(float) * dataLen, cudaMemcpyHostToDevice);
-    cudaMemset(d_keys.d_buffers[d_keys.selector ^ 1], 0,
-			   sizeof(float) * dataLen);
-    cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys,
-								   dataLen);
-    cudaMemcpy(data, d_keys.Current(), sizeof(float) * dataLen,
-			   cudaMemcpyDeviceToHost);
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	int test_time = 50;
+	for (size_t chunk_size = 1 << 17; chunk_size <= dataLen; chunk_size *= 2)
+	{
+		void *d_temp_storage = NULL;
+		size_t temp_storage_bytes = 0;
+		cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes,
+									   d_keys, chunk_size);
+		cda.DeviceAllocate(&d_temp_storage, temp_storage_bytes);
+		float transfer_time = 0.0, kernel_time = 0.0;
+		size_t offset = 0;
+		for (int i = 0; i < test_time; ++i)
+		{
+			if (offset == dataLen) offset = 0;
+			cudaEventRecord(start, 0);
+			cudaMemcpy(d_keys.d_buffers[0] + offset, data + offset,
+					   sizeof(float) * chunk_size, cudaMemcpyHostToDevice);
+			cudaEventRecord(stop, 0);
+			cudaEventSynchronize(stop);
+			float ttime;
+			cudaEventElapsedTime(&ttime, start, stop);
+			transfer_time += ttime;
+			cub::DoubleBuffer<float> chunk(d_keys.d_buffers[0] + offset,
+										   d_keys.d_buffers[1] + offset);
+			cudaEventRecord(start, 0);
+			cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes,
+										   chunk, chunk_size);
+			cudaEventRecord(stop, 0);
+			cudaEventSynchronize(stop);
+			float ktime;
+			cudaEventElapsedTime(&ktime, start, stop);
+			kernel_time += ktime;
+			offset += chunk_size;
+		}
+		rFile << boost::format("%1%%|15t|") % chunk_size
+			  << boost::format("%1%%|15t|") % (transfer_time / test_time)
+			  << boost::format("%1%%|15t|") % (kernel_time / test_time)
+			  << std::endl;
+		cda.DeviceFree(d_temp_storage);
+	}
+	
+    /*cudaMemset(d_keys.d_buffers[d_keys.selector ^ 1], 0,
+	  sizeof(float) * dataLen);*/
+    /*cudaMemcpy(data, d_keys.Current(), sizeof(float) * dataLen,
+	  cudaMemcpyDeviceToHost);*/
 	cda.DeviceFree(d_keys.d_buffers[0]);
 	cda.DeviceFree(d_keys.d_buffers[1]);
+	rFile << std::endl << std::endl;
+	rFile.close();
 }
 
 float *cpu_sort_sse_parallel(DoubleBuffer<float> &data, rsize_t dataLen)
@@ -264,7 +319,9 @@ void mergeStage(DoubleBuffer<float> &data, size_t dataLen, size_t chunkSize,
 				size_t blockSize)
 {
 	//boost::timer::auto_cpu_timer t;
-	updateMergeSelcetor(&data.selector, blockSize);
+	//updateMergeSelcetor(&data.selector, blockSize);
+	//data.selector ^= 1;
+	updateSelectorGeneral(data.selector, blockSize);
 #pragma omp parallel 
 	{
 #pragma omp for 
@@ -275,7 +332,8 @@ void mergeStage(DoubleBuffer<float> &data, size_t dataLen, size_t chunkSize,
 			{
 				DoubleBuffer<float> block(data.buffers[0] + bOffset,
 										  data.buffers[1] + bOffset);
-				mergeSort(block, blockSize);
+				//mergeSort(block, blockSize);
+				mergeSortGeneral(block, blockSize);
 			}
 			DoubleBuffer<float> chunk(data.buffers[data.selector] + cOffset,
 									  data.buffers[data.selector ^ 1] + cOffset);
@@ -308,10 +366,13 @@ void multiWayStage(DoubleBuffer<float> &data, size_t dataLen, size_t chunkSize,
 			{
 				DoubleBuffer<float> block(data.buffers[data.selector] + boffset,
 										  data.buffers[data.selector ^ 1] + boffset);
-				mergeSort(block, blockSize);
+				//mergeSort(block, blockSize);
+				mergeSortGeneral(block, blockSize);
 			}
 	}
-	updateMergeSelcetor(&data.selector, blockSize);
+	//updateMergeSelcetor(&data.selector, blockSize);
+	//data.selector ^= 1;
+	updateSelectorGeneral(data.selector, blockSize);
 }
 
 void hybrid_sort(float *data, size_t dataLen)
@@ -340,25 +401,26 @@ void hybrid_sort(float *data, size_t dataLen)
 		  << boost::format("%1%%|15t|") % "chunk size"
 		  << boost::format("%1%%|15t|") % "merge time"
 		  << boost::format("%1%%|15t|") % "multi way"
-		  << boost::format("%1%%|15t|") % "gpu omp"
-		  << boost::format("%1%%|15t|") % "gpu cuda" << std::endl;
+		//<< boost::format("%1%%|15t|") % "gpu omp"
+		//<< boost::format("%1%%|15t|") % "gpu cuda"
+		  << std::endl;
 	for (int j = 1; j <= 64; j *= 2)
 	{
 		size_t block_size = cacheSizeInByte() / (j * sizeof(float));
 		for (int m = 8; m <= 64; m *= 2)
 		{
-			double merge_time = 0.0, multiway_time = 0.0, gpu_time = 0.0;
-			float cuda_time = 0.0;
+			double merge_time = 0.0, multiway_time = 0.0; //gpu_time = 0.0;
+			//float cuda_time = 0.0;
 			size_t chunk_size = dataLen / m;
 			for (int i = 0; i < test_time; ++i)
 			{
 				double start, end;
-				std::copy(data, data + dataLen, dataIn);
+				/*std::copy(data, data + dataLen, dataIn);
 				start = omp_get_wtime();
 				cuda_time += gpu_sort(dataIn, dataLen, chunk_size);
 				cudaDeviceSynchronize();
 				end = omp_get_wtime();
-				gpu_time += (end - start);
+				gpu_time += (end - start);*/
 				std::copy(data, data + dataLen, dataIn);
 				hdata.selector = 0;
 				start = omp_get_wtime();
@@ -375,8 +437,8 @@ void hybrid_sort(float *data, size_t dataLen)
 				  << boost::format("%1%%|15t|") % chunk_size
 				  << boost::format("%1%%|15t|") % (merge_time / test_time)
 				  << boost::format("%1%%|15t|") % (multiway_time / test_time)
-				  << boost::format("%1%%|15t|") % (gpu_time / test_time)
-				  << boost::format("%1%%|15t|") % (cuda_time / test_time)
+				//<< boost::format("%1%%|15t|") % (gpu_time / test_time)
+				//<< boost::format("%1%%|15t|") % (cuda_time / test_time)
 				  << std::endl;
 		}
 	}

@@ -57,6 +57,7 @@ void registerSortIteration(DoubleBuffer<float> &data, rsize_t minStride,
 		data.selector ^= 1;
 		sortStride *= 2;
 	}
+	
 }
 
 void quantileInitialByPred(DoubleBuffer<rsize_t> &quantile, const rsize_t *upperBound,
@@ -227,7 +228,6 @@ void multiWayMergeGeneral(DoubleBuffer<float> &data, size_t dataLen,
 	float *ptrOut = data.buffers[data.selector ^ 1] + startOffset;
 	if (startOffset)
 	{
-		//ptrOut += startOffset;
 		quantileCompute(data.buffers[data.selector], quantile, bound, upperBound,
 						sortedChunkNum, mergeStride, startOffset, true);
 		std::copy(quantile.buffers[1], quantile.buffers[1] + sortedChunkNum,
@@ -272,6 +272,41 @@ void updateMergeSelcetor(int *selector, rsize_t dataLen)
 		*selector ^= 1;
 }
 
+void updateSelectorGeneral(int &selector, size_t dataLen)
+{
+	size_t sortedBlockLen = blockUnitLen;
+	size_t sortedBlockNum = dataLen / blockUnitLen;
+	do
+	{
+		selector ^= 1;
+		sortedBlockLen = std::min(sortedBlockNum, (size_t)16) * sortedBlockLen;
+		sortedBlockNum = dataLen / sortedBlockLen;
+	}while(sortedBlockNum > 1);
+}
 
+void mergeSortGeneral(DoubleBuffer<float> &data, size_t dataLen)
+{
+	for (rsize_t offset = 0; offset < dataLen; offset += blockUnitLen)
+		sortInRegister(data.Current() + offset);
+	// multiWayMergeGeneral(data, dataLen, blockUnitLen, blockUnitLen, 0, dataLen);
+	// data.selector ^= 1;
+	size_t sortedBlockLen = blockUnitLen;
+	size_t sortedBlockNum = dataLen / blockUnitLen;
+	do
+	{
+		size_t stride = std::min(sortedBlockNum, size_t(16));
+		size_t strideLen = stride * sortedBlockLen;
+		for (size_t j = 0; j < dataLen; j += strideLen)
+		{
+			multiWayMergeGeneral(data, dataLen, sortedBlockLen, blockUnitLen,
+								 j, j + strideLen);
+		}
+		data.selector ^= 1;
+		for (rsize_t offset = 0; offset < dataLen; offset += blockUnitLen)
+			sortInRegister(data.Current() + offset);
+		sortedBlockLen = strideLen;
+		sortedBlockNum = dataLen / sortedBlockLen;
+	}while(sortedBlockNum > 1);
+}
 		
 

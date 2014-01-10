@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 	gpu_sort_serial(data, dataLen, dataLen);
 	delete [] data;*/
 	//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-	for (int dlf = 20; dlf <= 21; ++dlf)
+	for (int dlf = 17; dlf <= 28; ++dlf)
 	{
 		dataLen = 1 << dlf;
 		std::cout << "data length: " << dataLen << std::endl;
@@ -319,9 +319,7 @@ void mergeStage(DoubleBuffer<float> &data, size_t dataLen, size_t chunkSize,
 				size_t blockSize)
 {
 	//boost::timer::auto_cpu_timer t;
-	//updateMergeSelcetor(&data.selector, blockSize);
-	//data.selector ^= 1;
-	updateSelectorGeneral(data.selector, blockSize);
+	updateMergeSelcetor(&data.selector, blockSize);
 #pragma omp parallel 
 	{
 #pragma omp for 
@@ -332,8 +330,7 @@ void mergeStage(DoubleBuffer<float> &data, size_t dataLen, size_t chunkSize,
 			{
 				DoubleBuffer<float> block(data.buffers[0] + bOffset,
 										  data.buffers[1] + bOffset);
-				//mergeSort(block, blockSize);
-				mergeSortGeneral(block, blockSize);
+				mergeSort(block, blockSize);
 			}
 			DoubleBuffer<float> chunk(data.buffers[data.selector] + cOffset,
 									  data.buffers[data.selector ^ 1] + cOffset);
@@ -366,13 +363,10 @@ void multiWayStage(DoubleBuffer<float> &data, size_t dataLen, size_t chunkSize,
 			{
 				DoubleBuffer<float> block(data.buffers[data.selector] + boffset,
 										  data.buffers[data.selector ^ 1] + boffset);
-				//mergeSort(block, blockSize);
-				mergeSortGeneral(block, blockSize);
+				mergeSort(block, blockSize);
 			}
 	}
-	//updateMergeSelcetor(&data.selector, blockSize);
-	//data.selector ^= 1;
-	updateSelectorGeneral(data.selector, blockSize);
+	updateMergeSelcetor(&data.selector, blockSize);
 }
 
 void hybrid_sort(float *data, size_t dataLen)
@@ -412,6 +406,7 @@ void hybrid_sort(float *data, size_t dataLen)
 			double merge_time = 0.0, multiway_time = 0.0; //gpu_time = 0.0;
 			//float cuda_time = 0.0;
 			size_t chunk_size = dataLen / m;
+			if (chunk_size < block_size) continue;
 			for (int i = 0; i < test_time; ++i)
 			{
 				double start, end;

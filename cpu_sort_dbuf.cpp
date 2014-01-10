@@ -11,32 +11,34 @@ void mergeInRegister(DoubleBuffer<float> &data, size_t dataLen)
 	const int halfArrayLen = rArrayLen >> 1;
 	__m128 *rData = new __m128[rArrayLen];
 	float *ptrOut = data.buffers[data.selector ^ 1];
-	float *ptrLeftEnd = data.Current() + halfDataLen;
-	float *ptrRightEnd = data.Current() + dataLen;
-	size_t lRemain = halfDataLen, rRemain = halfDataLen;
-	loadData(ptrRightEnd - rRemain, rData + halfArrayLen, halfArrayLen);
-	rRemain -= sortUnitLen;
-	while (lRemain || rRemain)
+	float *ptrIn[2], *end[2];
+	end[0] = data.Current() + halfDataLen;
+	end[1] = data.Current() + dataLen;
+	ptrIn[0] = data.Current();
+	ptrIn[1] = end[0];
+	loadData(ptrIn[1], rData + halfArrayLen, halfArrayLen);
+	ptrIn[1] += sortUnitLen;
+	while ((ptrIn[0] < end[0]) && (ptrIn[1] < end[1]))
 	{
-		bool useLeft;
-		if (lRemain && rRemain)
-            useLeft = *(ptrLeftEnd - lRemain) < *(ptrRightEnd - rRemain);
-        else
-            useLeft = lRemain > rRemain;
-        if (useLeft)
-        {
-            loadData(ptrLeftEnd - lRemain, rData, halfArrayLen);
-            lRemain -= sortUnitLen;
-        }
-        else
-        {
-            loadData(ptrRightEnd - rRemain, rData, halfArrayLen);
-            rRemain -= sortUnitLen;
-        }
+		int index = ((*ptrIn[0]) >= (*ptrIn[1]));
+		loadData(ptrIn[index], rData, halfArrayLen);
+		ptrIn[index] += sortUnitLen;
 		
-        bitonicSort16232(rData);
-        storeData(ptrOut, rData, halfArrayLen);
-        ptrOut += sortUnitLen;
+		_mm_prefetch(ptrIn[0], _MM_HINT_T0);
+		_mm_prefetch(ptrIn[1], _MM_HINT_T0);
+		bitonicSort16232(rData);
+		storeData(ptrOut, rData, halfArrayLen);
+		ptrOut += sortUnitLen;
+	}
+	int index = (ptrIn[0] == end[0]);
+	for (; ptrIn[index] < end[index]; ptrIn[index] += sortUnitLen)
+	{
+		loadData(ptrIn[index], rData, halfArrayLen);
+		
+		_mm_prefetch(ptrIn[index] + sortUnitLen, _MM_HINT_T0);
+		bitonicSort16232(rData);
+		storeData(ptrOut, rData, halfArrayLen);
+		ptrOut += sortUnitLen;
 	}
 	storeData(ptrOut, rData + halfArrayLen, halfArrayLen);
 	delete [] rData;
@@ -45,19 +47,16 @@ void mergeInRegister(DoubleBuffer<float> &data, size_t dataLen)
 void registerSortIteration(DoubleBuffer<float> &data, rsize_t minStride,
 						   rsize_t maxStride, rsize_t dataLen)
 {
-	rsize_t sortStride = minStride;
-	while (sortStride <= maxStride)
+	for (size_t i = minStride; i <= maxStride; i *= 2)
 	{
-		for (rsize_t j = 0; j < dataLen; j += sortStride)
+		for (rsize_t j = 0; j < dataLen; j += i)
 		{
 			DoubleBuffer<float> chunk(data.buffers[data.selector] + j,
-					data.buffers[data.selector ^ 1] + j);
-			mergeInRegister(chunk, sortStride);
+									  data.buffers[data.selector ^ 1] + j);
+			mergeInRegister(chunk, i);
 		}
 		data.selector ^= 1;
-		sortStride *= 2;
 	}
-	
 }
 
 void quantileInitialByPred(DoubleBuffer<rsize_t> &quantile, const rsize_t *upperBound,
@@ -149,12 +148,10 @@ void moveBaseQuantile(DoubleBuffer<float> &data, DoubleBuffer<rsize_t> &quantile
 {
 	quantileCompute(data.Current(), quantile, bound, upperBound, sortedBlockNum,
 					mergeStride, mergeStride);
-	//float *ptrOut = data.buffers[data.selector ^ 1];
 	for (rsize_t j = 0; j < sortedBlockNum; ++j)
 		for (rsize_t k = quantile.buffers[0][j];
 			 k < quantile.buffers[1][j]; ++k)
 			*(*ptrOut)++ = data.buffers[data.selector][k];
-	//quantile.selector ^= 1;
 	std::copy(quantile.buffers[1], quantile.buffers[1] + sortedBlockNum,
 			  quantile.buffers[0]);
 }
@@ -184,7 +181,6 @@ void multiWayMerge(DoubleBuffer<float> &data, rsize_t dataLen,
 						sortedBlockNum, mergeStride, mergeStride * i, true);
 		std::copy(quantile.buffers[1], quantile.buffers[1] + sortedBlockNum,
 				  quantile.buffers[0]);
-		//quantile.selector ^= 1;
 	}
 	else
 	{

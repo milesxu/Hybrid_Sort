@@ -1,4 +1,6 @@
 #include <iostream>
+#include <algorithm>
+#include <numeric>
 #include <fstream>
 #include <xmmintrin.h>
 #include <cuda_runtime.h>
@@ -12,11 +14,35 @@
 #include "util.h"
 #include "cpu_sort.h"
 
-const int cacheFactor = 4; //what is the most suitable cache size?
-const size_t chunkFactor = 1;
+const size_t chunkFactor = 2;
 const size_t dlFactor = 27;
 
-float gpu_sort(float *data, size_t dataLen, size_t blockLen);
+template<typename T>
+struct hybridDispatchParams
+{
+	size_t gpuChunkSize;
+	size_t cpuChunkSize;
+	size_t mergeBlockSize;
+	size_t multiwayBlockSize;
+	size_t gpuMergeLen;
+	size_t gpuMultiwayLen;
+	
+	hybridDispatchParams(size_t dataLen)
+	{
+		int mergeFactor = 3;
+		int multiwayFactor = 1;
+		int cacheFactor = 2; //what is the most suitable cache size?
+		gpuChunkSize = dataLen / (mergeFactor + 1);
+		cpuChunkSize = gpuChunkSize / omp_get_max_threads();
+		mergeBlockSize = cacheSizeInByte() / (cacheFactor * sizeof(T));
+		multiwayBlockSize = 512;
+		gpuMergeLen = gpuChunkSize * mergeFactor;
+		gpuMultiwayLen = dataLen * multiwayFactor / (multiwayFactor + 1);
+	}
+};
+
+float gpu_sort(DoubleBuffer<float> &data, size_t dataLen, size_t blockLen,
+			   int selector);
 void gpu_sort_serial(float *data, size_t dataLen, size_t blockLen);
 void gpu_sort_test(float *data, rsize_t dataLen);
 float *cpu_sort_sse_parallel(DoubleBuffer<float> &data, rsize_t dataLen);
@@ -38,7 +64,7 @@ int main(int argc, char **argv)
 	gpu_sort_serial(data, dataLen, dataLen);
 	delete [] data;*/
 	//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-	for (int dlf = 17; dlf <= 28; ++dlf)
+	for (int dlf = 20; dlf < 26; ++dlf)
 	{
 		dataLen = 1 << dlf;
 		std::cout << "data length: " << dataLen << std::endl;
@@ -70,7 +96,8 @@ std::cout << "single run" << omp_get_nested() << std::endl;
 //using stream to overlap kernal excution and data transfer between CPU and GPU.
 //all sorting task broken to 2 parts, the first will overlap data upload to GPU,
 //the second will overlap data download from CPU.
-float gpu_sort(float *data, size_t dataLen, size_t blockLen)
+float gpu_sort(DoubleBuffer<float> &data, size_t dataLen, size_t blockLen,
+			   int selector)
 {
 	//boost::timer::auto_cpu_timer t;
 	int blockNum = dataLen / blockLen;
@@ -91,17 +118,17 @@ float gpu_sort(float *data, size_t dataLen, size_t blockLen)
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 	cudaEventRecord(start, 0);
-	cudaMemcpyAsync(d_keys.d_buffers[d_keys.selector], data, blockBytes, cudaMemcpyHostToDevice, streams[0]);
+	cudaMemcpyAsync(d_keys.d_buffers[d_keys.selector], data.Current(), blockBytes, cudaMemcpyHostToDevice, streams[0]);
 	int remain_to_upload = blockNum - 1;
-	int upload_loop = remain_to_upload >> 1;
+	int upload_loop = std::max(1, remain_to_upload >> 1);
 	size_t offset = 0;
 	size_t up_offset = blockLen;
 	for (int i = 0; i < upload_loop; ++i)
 	{
 		cub::DoubleBuffer<float> chunk(d_keys.d_buffers[d_keys.selector] + offset, d_keys.d_buffers[d_keys.selector ^ 1] + offset);
 		cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, chunk, blockLen, 0, 32, streams[i]);
-		int upload_blocks = 2 + remain_to_upload % 2;
-		cudaMemcpyAsync(d_keys.d_buffers[d_keys.selector] + up_offset, data + up_offset, upload_blocks * blockBytes, cudaMemcpyHostToDevice, streams[i + 1]);
+		int upload_blocks = (remain_to_upload < 2)? 0 : 2 + remain_to_upload % 2;
+		cudaMemcpyAsync(d_keys.d_buffers[d_keys.selector] + up_offset, data.Current() + up_offset, upload_blocks * blockBytes, cudaMemcpyHostToDevice, streams[i + 1]);
 		remain_to_upload -= upload_blocks;
 		up_offset += upload_blocks * blockLen;
 		offset += blockLen;
@@ -114,12 +141,12 @@ float gpu_sort(float *data, size_t dataLen, size_t blockLen)
 		cub::DoubleBuffer<float> chunk(d_keys.d_buffers[d_keys.selector] + offset, d_keys.d_buffers[d_keys.selector ^ 1] + offset);
 		cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, chunk, blockLen, 0, 32, streams[i]);
 		int dowload_blocks = 1 + (remain_to_donwload > 1);
-		cudaMemcpyAsync(data + down_offset, d_keys.d_buffers[selector] + down_offset, dowload_blocks * blockBytes, cudaMemcpyDeviceToHost, streams[i - 1]);
+		cudaMemcpyAsync(data.buffers[selector] + down_offset, d_keys.d_buffers[selector] + down_offset, dowload_blocks * blockBytes, cudaMemcpyDeviceToHost, streams[i - 1]);
 		remain_to_donwload -= (dowload_blocks - 1);
 		down_offset += dowload_blocks * blockLen;
 		offset += blockLen;
 	}
-	cudaMemcpyAsync(data + dataLen - blockLen, d_keys.d_buffers[selector] + dataLen - blockLen, sizeof(float) * blockLen, cudaMemcpyDeviceToHost, streams[blockNum - 1]);
+	cudaMemcpyAsync(data.buffers[selector]) + dataLen - blockLen, d_keys.d_buffers[selector] + dataLen - blockLen, sizeof(float) * blockLen, cudaMemcpyDeviceToHost, streams[blockNum - 1]);
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 	float sort_time;
@@ -261,7 +288,7 @@ void gpu_sort_test(float *data, rsize_t dataLen)
 float *cpu_sort_sse_parallel(DoubleBuffer<float> &data, rsize_t dataLen)
 {
 	boost::timer::auto_cpu_timer t;
-	const rsize_t blockSize = cacheSizeInByte() / (cacheFactor * sizeof(float));
+	const rsize_t blockSize = cacheSizeInByte() / (2 * sizeof(float));
     std::cout << "selected block size: " << blockSize << std::endl;
 	if (blockSize)
 	{
@@ -283,7 +310,7 @@ float *cpu_sort_sse_parallel(DoubleBuffer<float> &data, rsize_t dataLen)
 			DoubleBuffer<float> chunk(data.buffers[selector] + chunkStart,
 									  data.buffers[selector ^ 1] + chunkStart);
 			//chunk.selector = selector ^ data.selector;
-			registerSortIteration(chunk, blockSize * 2, chunkSize, chunkSize);
+			registerSortIteration(chunk, blockSize * 2, chunkSize);
 #pragma omp single
 			data.selector = chunk.selector;
 		}
@@ -315,58 +342,96 @@ float *cpu_sort_sse_parallel(DoubleBuffer<float> &data, rsize_t dataLen)
 	return data.Current();
 }
 
-void mergeStage(DoubleBuffer<float> &data, size_t dataLen, size_t chunkSize,
-				size_t blockSize)
+void mergeStage(DoubleBuffer<float> &data, size_t dataLen,
+				hybridDispatchParams<float> &params)
 {
 	//boost::timer::auto_cpu_timer t;
-	updateMergeSelcetor(&data.selector, blockSize);
+	size_t bsize = params.mergeBlockSize, csize = params.cpuChunkSize;
+	int mSelector = 0;
+	updateMergeSelcetor(mSelector, bsize);
+	int iSelector = mSelector;
+	updateSelectorGeneral(iSelector, bsize, csize);
 #pragma omp parallel 
 	{
-#pragma omp for 
-		for (size_t cOffset = 0; cOffset < dataLen; cOffset += chunkSize)
+		omp_set_nested(1);
+#pragma omp sections
 		{
-			for (size_t bOffset = cOffset; bOffset < cOffset + chunkSize;
-				 bOffset += blockSize)
+#pragma omp section
 			{
-				DoubleBuffer<float> block(data.buffers[0] + bOffset,
-										  data.buffers[1] + bOffset);
-				mergeSort(block, blockSize);
+				gpu_sort(data, params.gpuMergeLen, params.gpuChunkSize,
+						 iSelector);
 			}
-			DoubleBuffer<float> chunk(data.buffers[data.selector] + cOffset,
-									  data.buffers[data.selector ^ 1] + cOffset);
-			registerSortIteration(chunk, blockSize * 2, chunkSize, chunkSize);
+#pragma omp section
+			{
+#pragma omp parallel for
+				for (size_t i = params.gpuMergeLen; i < dataLen; i += csize)
+				{
+					for (size_t j = i; j < i + csize; j += bsize)
+					{
+						DoubleBuffer<float> block(data.buffers[0] + j,
+												  data.buffers[1] + j);
+						mergeSort(block, bsize);
+					}
+					DoubleBuffer<float> chunk(data.buffers[mSelector] + i,
+											  data.buffers[mSelector ^ 1] + i);
+					registerSortIteration(chunk, bsize * 2, csize);
+				}
+			}
 		}
 	}
-	updateMergeSelcetor(&data.selector, chunkSize);
+	cudaDeviceSynchronize();
+	data.selector = iSelector;
 }
 
-void multiWayStage(DoubleBuffer<float> &data, size_t dataLen, size_t chunkSize,
-				   size_t blockSize)
+void multiWayStage(DoubleBuffer<float> &data, size_t dataLen,
+				   hybridDispatchParams<float> &params)
 {
 	//boost::timer::auto_cpu_timer t;
+	int gpuChunkNum = params.gpuMergeLen / params.gpuChunkSize;
+	int cpuChunkNum = (dataLen - params.gpuMergeLen) / params.cpuChunkSize;
+	int boundLen = gpuChunkNum + cpuChunkNum;
+	size_t *upperBound = new size_t[boundLen];
+	std::fill(upperBound, upperBound + gpuChunkNum, params.gpuChunkSize);
+	std::fill(upperBound + gpuChunkNum, upperBound + boundLen, params.cpuChunkSize);
+	std::partial_sum(upperBound, upperBound + dataLen/params.cpuChunkSize, upperBound);
 #pragma omp parallel
 	{
-#pragma omp for
-		for (size_t cOffset = 0; cOffset < dataLen; cOffset += chunkSize)
+		omp_set_nested(1);
+#pragma omp sections
 		{
-			multiWayMergeGeneral(data, dataLen, chunkSize, blockSize,
-								 cOffset, cOffset + chunkSize);
+#pragma omp section
+			{
+#pragma omp parallel for
+				for (size_t i = 0; i < params.gpuMultiwayLen; i += params.gpuChunkSize)
+					multiWayMergeHybrid(data, dataLen, upperBound, boundLen, params.gpuChunkSize, i, i + params.cpuChunkSize);
+				int selector = data.selector ^ 1;
+				DoubleBuffer<float> gpuChunk(data.buffers[selector],
+											 data.buffers[selector ^ 1]);
+				updateMergeSelcetor(selector, params.multiwayBlockSize);
+				gpu_sort(gpuChunk, params.gpuMultiwayLen, params.gpuChunkSize, selector ^ 1);
+			}
+#pragma omp section
+			{
+#pragma omp parallel for
+				for (size_t i = params.gpuMultiwayLen; i < dataLen; i += params.cpuChunkSize)
+					multiWayMergeHybrid(data, dataLen, upperBound, boundLen,
+										params.multiwayBlockSize, i, i + params.cpuChunkSize);
+				int selector = data.selector ^ 1;
+#pragma omp parallel for
+				for (size_t i = 0; i < dataLen; i += params.cpuChunkSize)
+					for (size_t j = i; j < i + params.cpuChunkSize;
+						 j += params.multiwayBlockSize)
+					{
+						DoubleBuffer<float> block(data.buffers[selector] + j,
+												  data.buffers[selector ^ 1] + j);
+						mergeSort(block, params.multiwayBlockSize);
+					}
+			}
 		}
 	}
 	data.selector ^= 1;
-#pragma omp parallel
-	{
-#pragma omp for
-		for (size_t cOffset = 0; cOffset < dataLen; cOffset += chunkSize)
-			for (size_t boffset = cOffset; boffset < cOffset + chunkSize;
-				 boffset += blockSize)
-			{
-				DoubleBuffer<float> block(data.buffers[data.selector] + boffset,
-										  data.buffers[data.selector ^ 1] + boffset);
-				mergeSort(block, blockSize);
-			}
-	}
-	updateMergeSelcetor(&data.selector, blockSize);
+	updateMergeSelcetor(&data.selector, params.multiwayBlockSize);
+	delete [] upperBound;
 }
 
 void hybrid_sort(float *data, size_t dataLen)
@@ -378,18 +443,17 @@ void hybrid_sort(float *data, size_t dataLen)
 	float* dataOut= (float*)_mm_malloc(dataLen * sizeof(float), 16);
 	std::copy(data, data + dataLen, dataIn);
 	DoubleBuffer<float> hdata(dataIn, dataOut);
-	const size_t chunkSize = dataLen / chunkFactor;
-	const size_t blockSize = cacheSizeInByte() / (cacheFactor * sizeof(float));
-	std::cout << "selected block size on cpu: " << blockSize << std::endl;
-	//TODO: if blockSize == 0, give it a default value.
-	mergeStage(hdata, dataLen, chunkSize, blockSize);
-	multiWayStage(hdata, dataLen, chunkSize, blockSize);
+	
+	hybridDispatchParams<float> params(dataLen);
+	mergeStage(hdata, dataLen, params);
+	multiWayStage(hdata, dataLen, params);
 	resultTest(hdata.Current(), dataLen);
+	//resultTest(hdata.buffers[hdata.selector ^ 1], dataLen);
 	/*std::copy(data, data + dataLen, dataIn);
 	gpu_sort(dataIn, dataLen, dataLen / 8);
 	cudaDeviceSynchronize();*/
 	
-	const int test_time = 50;
+	const int test_time = 0;
 	rFile << boost::format("%1%%|15t|") % "cache factor"
 		  << boost::format("%1%%|15t|") % "block length"
 		  << boost::format("%1%%|15t|") % "chunk size"
@@ -403,20 +467,20 @@ void hybrid_sort(float *data, size_t dataLen)
 		size_t block_size = cacheSizeInByte() / (j * sizeof(float));
 		for (int m = 8; m <= 64; m *= 2)
 		{
-			double merge_time = 0.0, multiway_time = 0.0; //gpu_time = 0.0;
+			//double merge_time = 0.0, multiway_time = 0.0; //gpu_time = 0.0;
 			//float cuda_time = 0.0;
 			size_t chunk_size = dataLen / m;
 			if (chunk_size < block_size) continue;
 			for (int i = 0; i < test_time; ++i)
 			{
-				double start, end;
+				//double start, end;
 				/*std::copy(data, data + dataLen, dataIn);
 				start = omp_get_wtime();
 				cuda_time += gpu_sort(dataIn, dataLen, chunk_size);
 				cudaDeviceSynchronize();
 				end = omp_get_wtime();
 				gpu_time += (end - start);*/
-				std::copy(data, data + dataLen, dataIn);
+				/*std::copy(data, data + dataLen, dataIn);
 				hdata.selector = 0;
 				start = omp_get_wtime();
 				mergeStage(hdata, dataLen, chunk_size, block_size);
@@ -425,16 +489,17 @@ void hybrid_sort(float *data, size_t dataLen)
 				start = omp_get_wtime();
 				multiWayStage(hdata, dataLen, chunk_size, block_size);
 				end = omp_get_wtime();
-				multiway_time += (end - start);
+				multiway_time += (end - start);*/
 			}
-			rFile << boost::format("%1%%|15t|") % j
-				  << boost::format("%1%%|15t|") % block_size
-				  << boost::format("%1%%|15t|") % chunk_size
-				  << boost::format("%1%%|15t|") % (merge_time / test_time)
-				  << boost::format("%1%%|15t|") % (multiway_time / test_time)
-				//<< boost::format("%1%%|15t|") % (gpu_time / test_time)
-				//<< boost::format("%1%%|15t|") % (cuda_time / test_time)
-				  << std::endl;
+			// rFile << boost::format("%1%%|15t|") % j
+			// 	  << boost::format("%1%%|15t|") % block_size
+			// 	  << boost::format("%1%%|15t|") % chunk_size
+			// 	  << boost::format("%1%%|15t|") % (merge_time / test_time)
+			// 	  << boost::format("%1%%|15t|") % (multiway_time / test_time)
+			// 	<< boost::format("%1%%|15t|") % (gpu_time / test_time)
+			// 	<< boost::format("%1%%|15t|") % (cuda_time / test_time)
+			// 	  << std::endl;
+			
 		}
 	}
 	_mm_free(dataIn);

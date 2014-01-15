@@ -45,9 +45,9 @@ void mergeInRegister(DoubleBuffer<float> &data, size_t dataLen)
 }
 
 void registerSortIteration(DoubleBuffer<float> &data, rsize_t minStride,
-						   rsize_t maxStride, rsize_t dataLen)
+						   rsize_t dataLen)
 {
-	for (size_t i = minStride; i <= maxStride; i *= 2)
+	for (size_t i = minStride; i <= dataLen; i *= 2)
 	{
 		for (rsize_t j = 0; j < dataLen; j += i)
 		{
@@ -59,57 +59,53 @@ void registerSortIteration(DoubleBuffer<float> &data, rsize_t minStride,
 	}
 }
 
-void quantileInitialByPred(DoubleBuffer<rsize_t> &quantile, const rsize_t *upperBound,
-						   DoubleBuffer<rsize_t> bound, rsize_t sortedBlockNum,
-						   rsize_t mergeStride)
+void quantileInitial(DoubleBuffer<rsize_t> &quantile, const rsize_t *upperBound,
+					 DoubleBuffer<rsize_t> bound, rsize_t chunkNum,
+					 rsize_t quantileLen, bool initial)
 {
-	for (rsize_t j = 0; j < sortedBlockNum; ++j)
+	for (rsize_t j = 0; j < chunkNum; ++j)
 		bound.buffers[1][j] =
-			std::min(quantile.buffers[0][j] + mergeStride, upperBound[j]);
-	rsize_t average = mergeStride / sortedBlockNum;
-	rsize_t n = mergeStride, row = 0;
-	while (n)
-	{
-		if (row == sortedBlockNum)
-			row = 0;
-		rsize_t toBeAdd = std::min(std::max(average, (rsize_t)1), n);
-		rsize_t canBeAdd =
-			bound.buffers[1][row] - quantile.buffers[1][row];
-		quantile.buffers[1][row] += std::min(toBeAdd, canBeAdd);
-		n -= std::min(toBeAdd, canBeAdd);
-		++row;
-	}
-}
-
-void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
-					 DoubleBuffer<rsize_t> &bound, const rsize_t *upperBound,
-					 rsize_t sortedBlockNum, rsize_t mergeStride,
-					 rsize_t quantileLen, bool initial = false)
-{
-	std::copy(quantile.Current(), quantile.Current() + sortedBlockNum,
-			  bound.buffers[0]);
+			std::min(quantile.buffers[0][j] + quantileLen, upperBound[j]);
 	if (initial)
 	{
-		for (rsize_t j = 0; j < sortedBlockNum; ++j)
-			bound.buffers[1][j] =
-				std::min(quantile.buffers[0][j] + quantileLen,
-						 upperBound[j]);
-		rsize_t average = quantileLen / sortedBlockNum;
-		rsize_t residue = quantileLen % sortedBlockNum;
-		for (rsize_t j = 0; j < sortedBlockNum; ++j)
+		rsize_t average = quantileLen / chunkNum;
+		rsize_t residue = quantileLen % chunkNum;
+		for (rsize_t j = 0; j < chunkNum; ++j)
 			quantile.buffers[1][j] = bound.buffers[0][j] + average +
 				(j < residue);
 	}
 	else
 	{
-		quantileInitialByPred(quantile, upperBound, bound, sortedBlockNum,
-							  mergeStride);
+		rsize_t average = quantileLen / chunkNum;
+		rsize_t n = quantileLen, row = 0;
+		while (n)
+		{
+			if (row == chunkNum)
+				row = 0;
+			rsize_t toBeAdd = std::min(std::max(average, (rsize_t)1), n);
+			rsize_t canBeAdd =
+				bound.buffers[1][row] - quantile.buffers[1][row];
+			quantile.buffers[1][row] += std::min(toBeAdd, canBeAdd);
+			n -= std::min(toBeAdd, canBeAdd);
+			++row;
+		}
 	}
+}
+
+void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
+					 DoubleBuffer<rsize_t> &bound, const rsize_t *upperBound,
+					 rsize_t chunkNum, rsize_t quantileLen,
+					 bool initial = false)
+{
+	std::copy(quantile.Current(), quantile.Current() + chunkNum,
+			  bound.buffers[0]);
+	quantileInitial(quantile, upperBound, bound, chunkNum,
+						quantileLen, initial);
 	while (true)
 	{
 		const float *lmax = NULL, *rmin = NULL;
 		rsize_t lmaxRow, rminRow;
-		for (rsize_t j  = 0; j < sortedBlockNum; ++j)
+		for (rsize_t j  = 0; j < chunkNum; ++j)
 		{
 			rsize_t testIndex = quantile.buffers[1][j];
 			if (testIndex > bound.buffers[0][j] &&
@@ -144,15 +140,18 @@ void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
 
 void moveBaseQuantile(DoubleBuffer<float> &data, DoubleBuffer<rsize_t> &quantile,
 					  DoubleBuffer<rsize_t> bound, const rsize_t *upperBound,
-					  rsize_t sortedBlockNum, rsize_t mergeStride, float **ptrOut)
+					  rsize_t chunkNum, rsize_t mergeStride, float **ptrOut)
 {
-	quantileCompute(data.Current(), quantile, bound, upperBound, sortedBlockNum,
-					mergeStride, mergeStride);
-	for (rsize_t j = 0; j < sortedBlockNum; ++j)
-		for (rsize_t k = quantile.buffers[0][j];
-			 k < quantile.buffers[1][j]; ++k)
-			*(*ptrOut)++ = data.buffers[data.selector][k];
-	std::copy(quantile.buffers[1], quantile.buffers[1] + sortedBlockNum,
+	quantileCompute(data.Current(), quantile, bound, upperBound, chunkNum,
+					mergeStride);
+	for (rsize_t j = 0; j < chunkNum; ++j)
+	{
+		std::copy(data.buffers[data.selector] + quantile.buffers[0][j],
+				  data.buffers[data.selector] + quantile.buffers[1][j],
+				  *ptrOut);
+		(*ptrOut) += (quantile.buffers[1][j] - quantile.buffers[0][j]);
+	}
+	std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
 			  quantile.buffers[0]);
 }
 
@@ -178,7 +177,7 @@ void multiWayMerge(DoubleBuffer<float> &data, rsize_t dataLen,
 	{
 		ptrOut += i * mergeStride;
 		quantileCompute(data.buffers[data.selector], quantile, bound, upperBound,
-						sortedBlockNum, mergeStride, mergeStride * i, true);
+						sortedBlockNum, mergeStride * i, true);
 		std::copy(quantile.buffers[1], quantile.buffers[1] + sortedBlockNum,
 				  quantile.buffers[0]);
 	}
@@ -225,7 +224,7 @@ void multiWayMergeGeneral(DoubleBuffer<float> &data, size_t dataLen,
 	if (startOffset)
 	{
 		quantileCompute(data.buffers[data.selector], quantile, bound, upperBound,
-						sortedChunkNum, mergeStride, startOffset, true);
+						sortedChunkNum, startOffset, true);
 		std::copy(quantile.buffers[1], quantile.buffers[1] + sortedChunkNum,
 				  quantile.buffers[0]);
 	}
@@ -254,30 +253,74 @@ void multiWayMergeGeneral(DoubleBuffer<float> &data, size_t dataLen,
 	delete [] loopLBound;
 }
 
+void multiWayMergeHybrid(DoubleBuffer<float> &data, size_t dataLen,
+						 size_t *upperBound, size_t chunkNum, size_t mergeStride,
+						 size_t startOffset, size_t endOffset)
+{
+	size_t *quantileStart = new size_t[chunkNum];
+	size_t *quantileEnd = new size_t[chunkNum];
+	size_t *loopUBound = new size_t[chunkNum];
+	size_t *loopLBound = new size_t[chunkNum];
+	DoubleBuffer<size_t> quantile(quantileStart, quantileEnd);
+	DoubleBuffer<size_t> bound(loopLBound, loopUBound);
+	quantile.buffers[0][0] = 0;
+	std::copy(upperBound, upperBound + chunkNum - 1, quantile.buffers[0] + 1);
+	/*for (size_t j = 1; j < chunkNum; ++j)
+	  quantile.buffers[0][j] = upperBound[j - 1];*/
+	float *ptrOut = data.buffers[data.selector ^ 1] + startOffset;
+	if (startOffset)
+	{
+		quantileCompute(data.buffers[data.selector], quantile, bound, upperBound,
+						chunkNum, startOffset, true);
+		std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
+				  quantile.buffers[0]);
+	}
+	else
+	{
+		std::copy(quantile.buffers[0], quantile.buffers[0] + chunkNum,
+				  quantile.buffers[1]);
+	}
+	for (size_t offset = startOffset; offset < endOffset - mergeStride;
+		 offset += mergeStride)
+	{
+		moveBaseQuantile(data, quantile, bound, upperBound, chunkNum,
+						 mergeStride, &ptrOut);
+	}
+	if (endOffset < dataLen)
+		moveBaseQuantile(data, quantile, bound, upperBound, chunkNum,
+						 mergeStride, &ptrOut);
+	else
+		for (size_t j = 0; j < chunkNum; ++j)
+			/*for (size_t k = quantile.buffers[0][j]; k < upperBound[j]; ++k)
+			 *ptrOut++ = data.buffers[data.selector][k];*/
+		{
+			std::copy(data.buffers[data.selector] + quantile.buffers[0][j],
+					  data.buffers[data.selector] + upperBound[j], ptrOut);
+			ptrOut += (upperBound[j] - quantile.buffers[0][j]);
+		}
+	delete [] quantileStart;
+	delete [] quantileEnd;
+	delete [] loopUBound;
+	delete [] loopLBound;
+}
+
 void mergeSort(DoubleBuffer<float> &data, rsize_t dataLen)
 {
 	for (rsize_t offset = 0; offset < dataLen; offset += blockUnitLen)
 		sortInRegister(data.Current() + offset);
-	registerSortIteration(data, blockUnitLen * 2, dataLen, dataLen);
+	registerSortIteration(data, blockUnitLen * 2, dataLen);
 }
 
-void updateMergeSelcetor(int *selector, rsize_t dataLen)
+void updateMergeSelcetor(int &selector, rsize_t dataLen)
 {
 	rsize_t blocks = dataLen / blockUnitLen;
-	if (_tzcnt_u64(blocks) & 1)
-		*selector ^= 1;
+	if (_tzcnt_u64(blocks) & 1) selector ^= 1;
 }
 
-void updateSelectorGeneral(int &selector, size_t dataLen)
+void updateSelectorGeneral(int &selector, size_t startLen, size_t dataLen)
 {
-	size_t sortedBlockLen = blockUnitLen;
-	size_t sortedBlockNum = dataLen / blockUnitLen;
-	do
-	{
-		selector ^= 1;
-		sortedBlockLen = std::min(sortedBlockNum, (size_t)16) * sortedBlockLen;
-		sortedBlockNum = dataLen / sortedBlockLen;
-	}while(sortedBlockNum > 1);
+	size_t blocks = dataLen / startLen;
+	if (_tzcnt_u64(blocks) & 1) selector ^= 1;
 }
 
 void mergeSortGeneral(DoubleBuffer<float> &data, size_t dataLen)

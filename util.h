@@ -12,7 +12,7 @@ typedef size_t rsize_t;
 void GenerateData(int seed, float *data, size_t N)
 {
     boost::minstd_rand generator(seed);
-    boost::uniform_real<float> floatDist(0, 6);
+    boost::uniform_real<float> floatDist(1.0, 6.0);
     for (size_t i = 0; i < N; i++)
     {
         data[i] = floatDist(generator);
@@ -23,9 +23,11 @@ template<typename T>bool resultTest(T *data, size_t N)
 {
     for (size_t i = 0; i < N - 1; i++)
     {
-        if (data[i] > data[i + 1] || data[i] == 0)
+        //if (data[i] > data[i + 1] || data[i] == 0)
+		if (data[i] > data[i + 1])
         {
-            std::cout << "unsorted at" << i << "!" << std::endl;
+            std::cout << "unsorted at fucking " << i << "! " << std::endl;
+			std::cout << "fail value: " << data[i] << " " << data[i + 1] << std::endl;
             return false;
         }
     }
@@ -48,6 +50,6 @@ inline size_t cacheSizeInByte()
         fclose(fptr);
     }
 #endif
-    std::cout << "cache size selected: " << size << std::endl;
+    //std::cout << "cache size selected: " << size << std::endl;
     return size;
 }

@@ -1,6 +1,7 @@
 /* sort functions using double buffer class */
 #include <iostream>
 #include <algorithm>
+#include <numeric>
 #include <immintrin.h>
 #include "cpu_sort.h"
 #include "sse_sort.h"
@@ -66,30 +67,61 @@ void quantileInitial(DoubleBuffer<rsize_t> &quantile, const rsize_t *upperBound,
 	for (rsize_t j = 0; j < chunkNum; ++j)
 		bound.buffers[1][j] =
 			std::min(quantile.buffers[0][j] + quantileLen, upperBound[j]);
-	if (initial)
+	// if (initial)
+	// {
+	// 	//when all sorted chunks are not equivalent size, average can greater
+	// 	//than size of a chunk.
+	// 	rsize_t average = quantileLen / chunkNum;
+	// 	rsize_t residue = quantileLen % chunkNum;
+	// 	for (rsize_t j = 0; j < chunkNum; ++j)
+	// 		quantile.buffers[1][j] = bound.buffers[0][j] + average +
+	// 			(j < residue);
+	// }
+	// else
+	// {
+	// 	rsize_t average = quantileLen / chunkNum;
+	// 	rsize_t n = quantileLen, row = 0;
+	// 	while (n)
+	// 	{
+	// 		if (row == chunkNum)
+	// 			row = 0;
+	// 		rsize_t toBeAdd = std::min(std::max(average, (rsize_t)1), n);
+	// 		rsize_t canBeAdd =
+	// 			bound.buffers[1][row] - quantile.buffers[1][row];
+	// 		quantile.buffers[1][row] += std::min(toBeAdd, canBeAdd);
+	// 		n -= std::min(toBeAdd, canBeAdd);
+	// 		++row;
+	// 	}
+	// }
+	if (initial) std::copy(bound.buffers[0], bound.buffers[0] + chunkNum,
+						   quantile.buffers[1]);
+	int *remain = new int[chunkNum];
+	std::fill(remain, remain + chunkNum, 1);
+	size_t n = quantileLen;
+	do
 	{
-		rsize_t average = quantileLen / chunkNum;
-		rsize_t residue = quantileLen % chunkNum;
-		for (rsize_t j = 0; j < chunkNum; ++j)
-			quantile.buffers[1][j] = bound.buffers[0][j] + average +
-				(j < residue);
-	}
-	else
-	{
-		rsize_t average = quantileLen / chunkNum;
-		rsize_t n = quantileLen, row = 0;
-		while (n)
+		size_t average = n / std::accumulate(remain, remain + chunkNum, 0);
+		for (size_t i = 0; i < chunkNum; ++i)
 		{
-			if (row == chunkNum)
-				row = 0;
-			rsize_t toBeAdd = std::min(std::max(average, (rsize_t)1), n);
-			rsize_t canBeAdd =
-				bound.buffers[1][row] - quantile.buffers[1][row];
-			quantile.buffers[1][row] += std::min(toBeAdd, canBeAdd);
-			n -= std::min(toBeAdd, canBeAdd);
-			++row;
+			if (remain[i])
+			{
+				size_t toBeAdd = std::min(std::max(average, size_t(1)), n);
+				size_t canBeAdd = bound.buffers[1][i] - quantile.buffers[1][i];
+				if (toBeAdd < canBeAdd)
+				{
+					quantile.buffers[1][i] += toBeAdd;
+					n -= toBeAdd;
+				}
+				else
+				{
+					quantile.buffers[1][i] = bound.buffers[1][i];
+					n -= canBeAdd;
+					remain[i] = 0;
+				}
+			}
 		}
-	}
+	}while(n);
+	delete [] remain;
 }
 
 void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
@@ -280,19 +312,20 @@ void multiWayMergeHybrid(DoubleBuffer<float> &data, size_t dataLen,
 		std::copy(quantile.buffers[0], quantile.buffers[0] + chunkNum,
 				  quantile.buffers[1]);
 	}
-	for (size_t offset = startOffset; offset < endOffset - mergeStride;
-		 offset += mergeStride)
+	size_t end = std::min(endOffset, dataLen - mergeStride);
+	for (size_t offset = startOffset; offset < end; offset += mergeStride)
 	{
 		moveBaseQuantile(data, quantile, bound, upperBound, chunkNum,
 						 mergeStride, &ptrOut);
 	}
-	if (endOffset < dataLen)
-		moveBaseQuantile(data, quantile, bound, upperBound, chunkNum,
-						 mergeStride, &ptrOut);
-	else
+	// if (endOffset < dataLen)
+	// 	moveBaseQuantile(data, quantile, bound, upperBound, chunkNum,
+	// 					 mergeStride, &ptrOut);
+	// else
+	if (endOffset == dataLen)
 		for (size_t j = 0; j < chunkNum; ++j)
-			/*for (size_t k = quantile.buffers[0][j]; k < upperBound[j]; ++k)
-			 *ptrOut++ = data.buffers[data.selector][k];*/
+			//for (size_t k = quantile.buffers[0][j]; k < upperBound[j]; ++k)
+				//*ptrOut++ = data.buffers[data.selector][k];
 		{
 			std::copy(data.buffers[data.selector] + quantile.buffers[0][j],
 					  data.buffers[data.selector] + upperBound[j], ptrOut);

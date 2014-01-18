@@ -1512,2169 +1512,28 @@ cache factor   block length   chunk size     merge time     multi way
 64             128            4194304        2.65812        5.6148         
 
 
-tested data length: 131072
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-4              2048           2048           -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-8              1024           2048           -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-16             512            2048           -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-32             256            2048           -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-64             128            2048           -nan           -nan           
-
-
-tested data length: 262144
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-
-
-tested data length: 524288
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-
 
 tested data length: 1048576
 cache factor   block length   chunk size     merge time     multi way      
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
 
 
 tested data length: 2097152
 cache factor   block length   chunk size     merge time     multi way      
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
 
 
 tested data length: 4194304
 cache factor   block length   chunk size     merge time     multi way      
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
 
 
 tested data length: 8388608
 cache factor   block length   chunk size     merge time     multi way      
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
 
 
 tested data length: 16777216
 cache factor   block length   chunk size     merge time     multi way      
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
 
 
 tested data length: 33554432
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-
-
-tested data length: 67108864
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-
-
-tested data length: 134217728
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           16777216       -nan           -nan           
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-2              4096           16777216       -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-4              2048           16777216       -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-8              1024           16777216       -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-16             512            16777216       -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-32             256            16777216       -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-64             128            16777216       -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-
-
-tested data length: 268435456
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           33554432       -nan           -nan           
-1              8192           16777216       -nan           -nan           
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-2              4096           33554432       -nan           -nan           
-2              4096           16777216       -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-4              2048           33554432       -nan           -nan           
-4              2048           16777216       -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-8              1024           33554432       -nan           -nan           
-8              1024           16777216       -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-16             512            33554432       -nan           -nan           
-16             512            16777216       -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-32             256            33554432       -nan           -nan           
-32             256            16777216       -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-64             128            33554432       -nan           -nan           
-64             128            16777216       -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-
-
-tested data length: 131072
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-4              2048           2048           -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-8              1024           2048           -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-16             512            2048           -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-32             256            2048           -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-64             128            2048           -nan           -nan           
-
-
-tested data length: 262144
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-
-
-tested data length: 524288
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-
-
-tested data length: 1048576
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-
-
-tested data length: 2097152
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-
-
-tested data length: 4194304
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-
-
-tested data length: 8388608
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-
-
-tested data length: 16777216
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-
-
-tested data length: 33554432
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-
-
-tested data length: 67108864
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-
-
-tested data length: 134217728
-tested data length: 131072
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-4              2048           2048           -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-8              1024           2048           -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-16             512            2048           -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-32             256            2048           -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-64             128            2048           -nan           -nan           
-
-
-tested data length: 262144
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-
-
-tested data length: 524288
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-
-
-tested data length: 1048576
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-
-
-tested data length: 2097152
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-
-
-tested data length: 4194304
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-
-
-tested data length: 8388608
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-
-
-tested data length: 16777216
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-
-
-tested data length: 33554432
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-
-
-tested data length: 67108864
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-
-
-tested data length: 134217728
-tested data length: 131072
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-4              2048           2048           -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-8              1024           2048           -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-16             512            2048           -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-32             256            2048           -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-64             128            2048           -nan           -nan           
-
-
-tested data length: 262144
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-
-
-tested data length: 524288
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-
-
-tested data length: 1048576
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-
-
-tested data length: 2097152
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-
-
-tested data length: 4194304
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-
-
-tested data length: 8388608
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-
-
-tested data length: 16777216
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-
-
-tested data length: 33554432
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-
-
-tested data length: 67108864
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-
-
-tested data length: 134217728
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           16777216       -nan           -nan           
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-2              4096           16777216       -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-4              2048           16777216       -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-8              1024           16777216       -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-16             512            16777216       -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-32             256            16777216       -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-64             128            16777216       -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-
-
-tested data length: 268435456
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           33554432       -nan           -nan           
-1              8192           16777216       -nan           -nan           
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-2              4096           33554432       -nan           -nan           
-2              4096           16777216       -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-4              2048           33554432       -nan           -nan           
-4              2048           16777216       -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-8              1024           33554432       -nan           -nan           
-8              1024           16777216       -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-16             512            33554432       -nan           -nan           
-16             512            16777216       -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-32             256            33554432       -nan           -nan           
-32             256            16777216       -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-64             128            33554432       -nan           -nan           
-64             128            16777216       -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-
-
-tested data length: 131072
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-4              2048           2048           -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-8              1024           2048           -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-16             512            2048           -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-32             256            2048           -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-64             128            2048           -nan           -nan           
-
-
-tested data length: 262144
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-
-
-tested data length: 524288
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-
-
-tested data length: 1048576
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-
-
-tested data length: 2097152
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-
-
-tested data length: 4194304
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-
-
-tested data length: 8388608
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-
-
-tested data length: 16777216
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-
-
-tested data length: 33554432
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-
-
-tested data length: 67108864
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-
-
-tested data length: 134217728
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           16777216       -nan           -nan           
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-2              4096           16777216       -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-4              2048           16777216       -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-8              1024           16777216       -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-16             512            16777216       -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-32             256            16777216       -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-64             128            16777216       -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-
-
-tested data length: 268435456
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           33554432       -nan           -nan           
-1              8192           16777216       -nan           -nan           
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-2              4096           33554432       -nan           -nan           
-2              4096           16777216       -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-4              2048           33554432       -nan           -nan           
-4              2048           16777216       -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-8              1024           33554432       -nan           -nan           
-8              1024           16777216       -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-16             512            33554432       -nan           -nan           
-16             512            16777216       -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-32             256            33554432       -nan           -nan           
-32             256            16777216       -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-64             128            33554432       -nan           -nan           
-64             128            16777216       -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-
-
-tested data length: 131072
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-4              2048           2048           -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-8              1024           2048           -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-16             512            2048           -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-32             256            2048           -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-64             128            2048           -nan           -nan           
-
-
-tested data length: 262144
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-2              4096           4096           -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-4              2048           4096           -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-8              1024           4096           -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-16             512            4096           -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-32             256            4096           -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-64             128            4096           -nan           -nan           
-
-
-tested data length: 524288
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-1              8192           8192           -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-2              4096           8192           -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-4              2048           8192           -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-8              1024           8192           -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-16             512            8192           -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-32             256            8192           -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-64             128            8192           -nan           -nan           
-
-
-tested data length: 1048576
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-1              8192           16384          -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-2              4096           16384          -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-4              2048           16384          -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-8              1024           16384          -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-16             512            16384          -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-32             256            16384          -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-64             128            16384          -nan           -nan           
-
-
-tested data length: 2097152
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-1              8192           32768          -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-2              4096           32768          -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-4              2048           32768          -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-8              1024           32768          -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-16             512            32768          -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-32             256            32768          -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-64             128            32768          -nan           -nan           
-
-
-tested data length: 4194304
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-1              8192           65536          -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-2              4096           65536          -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-4              2048           65536          -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-8              1024           65536          -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-16             512            65536          -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-32             256            65536          -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-64             128            65536          -nan           -nan           
-
-
-tested data length: 8388608
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-1              8192           131072         -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-2              4096           131072         -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-4              2048           131072         -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-8              1024           131072         -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-16             512            131072         -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-32             256            131072         -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-64             128            131072         -nan           -nan           
-
-
-tested data length: 16777216
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-1              8192           262144         -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-2              4096           262144         -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-4              2048           262144         -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-8              1024           262144         -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-16             512            262144         -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-32             256            262144         -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-64             128            262144         -nan           -nan           
-
-
-tested data length: 33554432
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-1              8192           524288         -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-2              4096           524288         -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-4              2048           524288         -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-8              1024           524288         -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-16             512            524288         -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-32             256            524288         -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-64             128            524288         -nan           -nan           
-
-
-tested data length: 67108864
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-1              8192           1048576        -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-2              4096           1048576        -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-4              2048           1048576        -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-8              1024           1048576        -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-16             512            1048576        -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-32             256            1048576        -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-64             128            1048576        -nan           -nan           
-
-
-tested data length: 134217728
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           16777216       -nan           -nan           
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-1              8192           2097152        -nan           -nan           
-2              4096           16777216       -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-2              4096           2097152        -nan           -nan           
-4              2048           16777216       -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-4              2048           2097152        -nan           -nan           
-8              1024           16777216       -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-8              1024           2097152        -nan           -nan           
-16             512            16777216       -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-16             512            2097152        -nan           -nan           
-32             256            16777216       -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-32             256            2097152        -nan           -nan           
-64             128            16777216       -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-64             128            2097152        -nan           -nan           
-
-
-tested data length: 268435456
-cache factor   block length   chunk size     merge time     multi way      
-1              8192           33554432       -nan           -nan           
-1              8192           16777216       -nan           -nan           
-1              8192           8388608        -nan           -nan           
-1              8192           4194304        -nan           -nan           
-2              4096           33554432       -nan           -nan           
-2              4096           16777216       -nan           -nan           
-2              4096           8388608        -nan           -nan           
-2              4096           4194304        -nan           -nan           
-4              2048           33554432       -nan           -nan           
-4              2048           16777216       -nan           -nan           
-4              2048           8388608        -nan           -nan           
-4              2048           4194304        -nan           -nan           
-8              1024           33554432       -nan           -nan           
-8              1024           16777216       -nan           -nan           
-8              1024           8388608        -nan           -nan           
-8              1024           4194304        -nan           -nan           
-16             512            33554432       -nan           -nan           
-16             512            16777216       -nan           -nan           
-16             512            8388608        -nan           -nan           
-16             512            4194304        -nan           -nan           
-32             256            33554432       -nan           -nan           
-32             256            16777216       -nan           -nan           
-32             256            8388608        -nan           -nan           
-32             256            4194304        -nan           -nan           
-64             128            33554432       -nan           -nan           
-64             128            16777216       -nan           -nan           
-64             128            8388608        -nan           -nan           
-64             128            4194304        -nan           -nan           
-
-
-tested data length: 131072
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 262144
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 524288
 cache factor   block length   chunk size     merge time     multi way      
 
 
@@ -3702,30 +1561,6 @@ tested data length: 33554432
 cache factor   block length   chunk size     merge time     multi way      
 
 
-tested data length: 67108864
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 134217728
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 268435456
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 131072
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 262144
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 524288
-cache factor   block length   chunk size     merge time     multi way      
-
-
 tested data length: 1048576
 cache factor   block length   chunk size     merge time     multi way      
 
@@ -3747,30 +1582,6 @@ cache factor   block length   chunk size     merge time     multi way
 
 
 tested data length: 33554432
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 67108864
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 134217728
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 268435456
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 1048576
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 1048576
-cache factor   block length   chunk size     merge time     multi way      
-
-
-tested data length: 1048576
 cache factor   block length   chunk size     merge time     multi way      
 
 
@@ -3847,4 +1658,1115 @@ cache factor   block length   chunk size     merge time     multi way
 
 
 tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
 tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 1048576
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 2097152
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 4194304
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 8388608
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 16777216
+cache factor   block length   chunk size     merge time     multi way      
+
+
+tested data length: 33554432
+cache factor   block length   chunk size     merge time     multi way      
+
+

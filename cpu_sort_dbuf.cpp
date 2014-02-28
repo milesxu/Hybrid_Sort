@@ -2,6 +2,8 @@
 #include <iostream>
 #include <algorithm>
 #include <numeric>
+#include <omp.h>
+#include <xmmintrin.h>
 #include <immintrin.h>
 #include "cpu_sort.h"
 #include "sse_sort.h"
@@ -10,7 +12,8 @@ void mergeInRegister(DoubleBuffer<float> &data, size_t dataLen)
 {
 	const size_t halfDataLen = dataLen >> 1;
 	const int halfArrayLen = rArrayLen >> 1;
-	__m128 *rData = new __m128[rArrayLen];
+	//__m128 *rData = new __m128[rArrayLen];
+	__m128 rData[rArrayLen];
 	float *ptrOut = data.buffers[data.selector ^ 1];
 	float *ptrIn[2], *end[2];
 	end[0] = data.Current() + halfDataLen;
@@ -42,7 +45,390 @@ void mergeInRegister(DoubleBuffer<float> &data, size_t dataLen)
 		ptrOut += sortUnitLen;
 	}
 	storeData(ptrOut, rData + halfArrayLen, halfArrayLen);
-	delete [] rData;
+	//delete [] rData;
+}
+
+// blockNum must be power of 2 and cannot great than 8.
+// len indicate how many simd register lanes will be use per block.
+void inline loadSimdDataInitial(__m128 *rData, float **blocks, int blockNum,
+								int len)
+{
+	int offset = len;
+	for (int i = 1; i < blockNum; i += 2)
+	{
+		loadData(blocks + i, rData + offset, len);
+		offset += 2 * len;
+	}
+}
+
+void inline loadSimdData(__m128 *rData, float **blocks, float **blockBound,
+						 int blockNum, int len)
+{
+	int second, offset = 0;
+	for (int i = 0; i < blockNum; i += 2)
+	{
+		if (blocks[i] != blockBound[i] && blocks[i + 1] != blockBound[i + 1])
+			second = (*(blocks[i]) >= *(blocks[i + 1]));
+		else
+			second = (blocks[i] == blockBound[i]);
+		loadData(blocks + i + second, rData + offset, len);
+		offset += 2 * len;
+	}
+}
+
+//TODO: recall the means of blockNum, may be there are several blocks of output?
+void inline storeSimdData(__m128 *rData, float **output, int blockNum, int len,
+						  int start)
+{
+	int offset = start;
+	//rData += end;
+	for (int i = 0; i < blockNum; i += 2)
+	{
+		storeData(output + (i >> 1), rData + offset, len);
+		offset += 2 * len;
+	}
+}
+
+// data length and block length both must be power of 2.
+void mergeInRegister(DoubleBuffer<float> &data, size_t dataLen, size_t blockLen)
+{
+	size_t blockNum = dataLen / blockLen;
+	size_t bLen = blockLen;
+	//__m128 *rData = new __m128[rArrayLen];
+	__m128 rData[rArrayLen];
+	for (; blockNum >= rArrayLen; blockNum >>= 1, bLen <<= 1)
+	{
+		float *blocks[rArrayLen];
+		float *blockBound[rArrayLen];
+		float *output[rArrayLen >> 1];
+		for (size_t i = 0; i < blockNum; i += rArrayLen)
+		{
+			size_t startIndex = i * bLen;
+			blocks[0] = data.buffers[data.selector] + startIndex;
+			//pointers cannot be added.
+			for (int j = 1; j < rArrayLen; ++j) blocks[j] = blocks[j-1] + bLen;
+			std::copy(blocks + 1, blocks + rArrayLen, blockBound);
+			blockBound[rArrayLen - 1] = blocks[rArrayLen - 1] + bLen;
+			output[0] = data.buffers[data.selector ^ 1] + startIndex;
+			for (int j = 1; j < (rArrayLen >> 1); ++j)
+				output[j] = output[j - 1] + (bLen << 1);
+			
+			//1 is actually rArrayLen / rArrayLen
+			loadSimdDataInitial(rData, blocks, rArrayLen, 1);
+			//simdLen actually is rArrayLen * simdLen / rArrayLen
+			size_t loop = bLen * 2 / simdLen - 1;
+			for (size_t i = 0; i < loop; ++i)
+			{
+				loadSimdData(rData, blocks, blockBound, rArrayLen, 1);
+				bitonicSort428<4>(rData, true);
+				storeSimdData(rData, output, rArrayLen, 1, 0);
+			}
+			storeSimdData(rData, output, rArrayLen, 1, 1);
+		}
+		/*delete [] blocks;
+		delete [] blockBound;
+		delete [] output;*/
+		data.selector ^= 1;
+	}
+	//delete [] rData;
+	for (; blockNum > 1; blockNum >>= 1, bLen <<= 1)
+	{
+		float **blocks = new float *[blockNum];
+		float **blockBound = new float *[blockNum];
+		float **output = new float *[blockNum >> 1];
+		blocks[0] = data.buffers[data.selector];
+		for (int i = 1; i < blockNum; ++i) blocks[i] = blocks[i - 1] + bLen;
+		std::copy(blocks + 1, blocks + blockNum, blockBound);
+		blockBound[blockNum - 1] = blocks[blockNum - 1] + bLen;
+		output[0] = data.buffers[data.selector ^ 1];
+		for (int i = 1; i < (blockNum >> 1); ++i)
+			output[i] = output[i - 1] + (bLen << 1);
+		
+		int len = rArrayLen / blockNum;
+		loadSimdDataInitial(rData, blocks, blockNum, len);
+		size_t loop = bLen * 2 / (len * simdLen) - 1;
+		for (size_t i = 0; i < loop; ++i)
+		{
+			loadSimdData(rData, blocks, blockBound, blockNum, len);
+			if (blockNum == 4) bitonicSort8216<2>(rData, true);
+			if (blockNum == 2) bitonicSort16232(rData);
+			storeSimdData(rData, output, blockNum, len, 0);
+		}
+		storeSimdData(rData, output, blockNum, len, len);
+		delete [] blocks;
+		delete [] blockBound;
+		delete [] output;
+		data.selector ^= 1;
+	}
+}
+
+bool inline multipleOf(size_t offset, int factor)
+{
+	return ((offset & ~(factor - 1)) == offset);
+}
+
+void inline swapFloat(float &a, float &b)
+{
+	float temp = a;
+	a = b;
+	b = temp;
+}
+
+void inline loadUnalignData(float *data, size_t &offsetA, size_t &offsetB,
+							float *unalignData, int factor, bool start)
+{
+	size_t startA, endA, startB, endB;
+	size_t factornot = ~(factor - 1);
+	if (start)
+	{
+		startA = offsetA;
+		endA = (offsetA + factor) & factornot;
+		startB = offsetB;
+		endB = (offsetB + factor) & factornot;
+		offsetA = endA;
+		offsetB = endB;
+	}
+	else
+	{
+		startA = offsetA & factornot;
+		endA = offsetA;
+		startB = offsetB & factornot;
+		endB = offsetB;
+		offsetA = startA;
+		offsetB = startB;
+	}
+	int n = 0;
+	//remember that the value of unalignData cannot be changed here.
+	for (float *ptr = data + startA; ptr < data + endA; ++ptr, ++n)
+		unalignData[n] = *ptr;
+	for (float *ptr = data + startB; ptr < data + endB; ++ptr, ++n)
+		unalignData[n] = *ptr;
+	int lenA = endA - startA;
+	if (lenA % simdLen)
+	{
+		int laneIndex = lenA / simdLen;
+		float *ptr = unalignData + laneIndex * simdLen;
+		if (ptr[0] > ptr[1]) swapFloat(ptr[0], ptr[1]);
+		if (ptr[2] > ptr[3]) swapFloat(ptr[2], ptr[3]);
+		if (ptr[0] > ptr[2]) swapFloat(ptr[0], ptr[2]);
+		if (ptr[1] > ptr[3]) swapFloat(ptr[1], ptr[3]);
+		if (ptr[1] > ptr[2]) swapFloat(ptr[1], ptr[2]);
+	}
+}
+
+//merge two lists into one list. the two list both reside in dataIn, the
+//elements that will be merged is bounded by offset arrays.
+void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
+					  size_t offsetB[2], bool stream = false)
+{
+	int unitLen = (rArrayLen >> 1) * simdLen;
+	int halfArrayLen = rArrayLen >> 1;
+	__m128 rData[rArrayLen];
+	float **output = new float*;
+	*output = dataOut;
+	if (!multipleOf(offsetA[0], unitLen))
+	{
+		float *unalignStart = new float[unitLen];
+		loadUnalignData(dataIn, offsetA[0], offsetB[0], unalignStart, unitLen,
+						true);
+		loadData(unalignStart, rData + halfArrayLen, halfArrayLen);
+		bitonicSort428<2>(rData + halfArrayLen, true);
+		bitonicSort8216<1>(rData + halfArrayLen, true);
+		delete [] unalignStart;
+	}
+	else
+	{
+		loadData(dataIn + offsetB[0], rData + halfArrayLen,
+				 halfArrayLen);
+		offsetB[0] += unitLen;
+	}
+	size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
+	float *unalignEnd = NULL;
+	if (!multipleOf(offsetA[1], unitLen))
+	{
+		unalignEnd = new float[unitLen];
+		loadUnalignData(dataIn, offsetA[1], offsetB[1], unalignEnd,
+						unitLen, false);
+		--loop;
+	}
+	float *blocks[2], *blockBound[2];
+	blocks[0] = dataIn + offsetA[0], blocks[1] = dataIn + offsetB[0];
+	blockBound[0] = dataIn + offsetA[1], blockBound[1] = dataIn + offsetB[1];
+	if (stream)
+	{
+		for (size_t i = 0; i < loop; ++i)
+		{
+			loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
+			bitonicSort16232(rData);
+			streamData(output, rData, halfArrayLen);
+		}
+		if (unalignEnd != NULL)
+		{
+			loadData(unalignEnd, rData, halfArrayLen);
+			bitonicSort428<2>(rData, true);
+			bitonicSort8216<1>(rData, true);
+			bitonicSort16232(rData);
+			streamData(output, rData, rArrayLen);
+			delete [] unalignEnd;
+		}
+		else
+			streamData(output, rData + halfArrayLen, halfArrayLen);
+	}
+	else
+	{
+		for (size_t i = 0; i < loop; ++i)
+		{
+			loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
+			bitonicSort16232(rData);
+			storeData(output, rData, halfArrayLen);
+		}
+		if (unalignEnd != NULL)
+		{
+			loadData(unalignEnd, rData, halfArrayLen);
+			bitonicSort428<2>(rData, true);
+			bitonicSort8216<1>(rData, true);
+			bitonicSort16232(rData);
+			storeData(output, rData, rArrayLen);
+			delete [] unalignEnd;
+		}
+		else
+			storeData(output, rData + halfArrayLen, halfArrayLen);
+	}
+}
+
+void mergeInRegisterUnalignBuffer(DoubleBuffer<float> &data,
+								  DoubleBuffer<float> &buffer,
+								  size_t *offsetA, size_t *offsetB,
+								  size_t outputOffset)
+{
+	simdMergeGeneral(data.buffers[data.selector],
+					 buffer.buffers[buffer.selector] + outputOffset,
+					 offsetA, offsetB);
+}
+
+void mergeInRegisterUnalign(DoubleBuffer<float> &data, size_t offsetA[2],
+							size_t offsetB[2], size_t outputOffset)
+{
+	simdMergeGeneral(data.buffers[data.selector],
+					 data.buffers[data.selector ^ 1] + outputOffset,
+					 offsetA, offsetB);
+	/*int unitLen = (rArrayLen >> 1) * simdLen;
+	int halfArrayLen = rArrayLen >> 1;
+	__m128 rData[rArrayLen];
+	float **output = new float*;
+	*output = data.buffers[data.selector ^ 1] + outputOffset;
+	if (!multipleOf(offsetA[0], unitLen))
+	{
+		float *unalignStart = new float[unitLen];
+		loadUnalignData(data.Current(), offsetA[0], offsetB[0], unalignStart, unitLen,
+						true);
+		loadData(unalignStart, rData + halfArrayLen, halfArrayLen);
+		bitonicSort428<2>(rData + halfArrayLen, true);
+		bitonicSort8216<1>(rData + halfArrayLen, true);
+		delete [] unalignStart;
+	}
+	else
+	{
+		loadData(data.Current() + offsetB[0], rData + halfArrayLen,
+				 halfArrayLen);
+		offsetB[0] += unitLen;
+	}
+	size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
+	float *unalignEnd = NULL;
+	if (!multipleOf(offsetA[1], unitLen))
+	{
+		unalignEnd = new float[unitLen];
+		loadUnalignData(data.Current(), offsetA[1], offsetB[1], unalignEnd,
+						unitLen, false);
+		--loop;
+	}
+	float *blocks[2], *blockBound[2];
+	blocks[0] = data.Current() + offsetA[0];
+	blocks[1] = data.Current() + offsetB[0];
+	blockBound[0] = data.Current() + offsetA[1];
+	blockBound[1] = data.Current() + offsetB[1];
+	for (size_t i = 0; i < loop; ++i)
+	{
+		loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
+		bitonicSort16232(rData);
+		//storeSimdData(rData, output, 2, halfArrayLen, 0);
+		storeData(output, rData, halfArrayLen);
+	}
+	if (unalignEnd != NULL)
+	{
+		loadData(unalignEnd, rData, halfArrayLen);
+		bitonicSort428<2>(rData, true);
+		bitonicSort8216<1>(rData, true);
+		bitonicSort16232(rData);
+		//storeSimdData(rData, output, 2, halfArrayLen, 0);
+		storeData(output, rData, rArrayLen);
+		delete [] unalignEnd;
+	}
+	else
+		storeData(output, rData + halfArrayLen, halfArrayLen);
+	//storeSimdData(rData, output, 2, halfArrayLen, halfArrayLen);
+	delete output;*/
+}
+
+void mergeInRegisterUnalign(DoubleBuffer<float> &data, size_t offsetA[2],
+							size_t offsetB[2], float *outputOffset)
+{
+	int unitLen = (rArrayLen >> 1) * simdLen;
+	int halfArrayLen = rArrayLen >> 1;
+	__m128 rData[rArrayLen];
+	float **output = new float*;
+	*output = outputOffset;
+	if (!multipleOf(offsetA[0], unitLen))
+	{
+		float *unalignStart = new float[unitLen];
+		loadUnalignData(data.Current(), offsetA[0], offsetB[0], unalignStart,
+						unitLen, true);
+		loadData(unalignStart, rData + halfArrayLen, halfArrayLen);
+		bitonicSort428<2>(rData + halfArrayLen, true);
+		bitonicSort8216<1>(rData + halfArrayLen, true);
+		delete [] unalignStart;
+	}
+	else
+	{
+		loadData(data.Current() + offsetB[0], rData + halfArrayLen,
+				 halfArrayLen);
+		offsetB[0] += unitLen;
+	}
+	size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
+	float *unalignEnd = NULL;
+	if (!multipleOf(offsetA[1], unitLen))
+	{
+		unalignEnd = new float[unitLen];
+		loadUnalignData(data.Current(), offsetA[1], offsetB[1], unalignEnd,
+						unitLen, false);
+		--loop;
+	}
+	float *blocks[2], *blockBound[2];
+	blocks[0] = data.Current() + offsetA[0];
+	blocks[1] = data.Current() + offsetB[0];
+	blockBound[0] = data.Current() + offsetA[1];
+	blockBound[1] = data.Current() + offsetB[1];
+	for (size_t i = 0; i < loop; ++i)
+	{
+		loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
+		bitonicSort16232(rData);
+		//storeSimdData(rData, output, 2, halfArrayLen, 0);
+		storeData(output, rData, halfArrayLen);
+	}
+	if (unalignEnd != NULL)
+	{
+		loadData(unalignEnd, rData, halfArrayLen);
+		bitonicSort428<2>(rData, true);
+		bitonicSort8216<1>(rData, true);
+		bitonicSort16232(rData);
+		//storeSimdData(rData, output, 2, halfArrayLen, 0);
+		storeData(output, rData, rArrayLen);
+		delete [] unalignEnd;
+	}
+	else
+		storeData(output, rData + halfArrayLen, halfArrayLen);
+	//storeSimdData(rData, output, 2, halfArrayLen, halfArrayLen);
+	delete output;
 }
 
 void registerSortIteration(DoubleBuffer<float> &data, rsize_t minStride,
@@ -344,7 +730,24 @@ void mergeSort(DoubleBuffer<float> &data, rsize_t dataLen)
 	registerSortIteration(data, blockUnitLen * 2, dataLen);
 }
 
-void updateMergeSelcetor(int &selector, rsize_t dataLen)
+void singleThreadMerge(DoubleBuffer<float> &data, size_t dataLen)
+{
+	__m128 rData[rArrayLen];
+	float *ptr = data.buffers[data.selector];
+	size_t loop = dataLen >> logBlockUnitLen; 
+	//cannot use pointer to pointer, because load data and store data coexist.
+	for (size_t i = 0; i < loop; ++i)
+	{
+		loadData(ptr, rData, rArrayLen);
+		simdOddEvenSort(rData);
+		bitonicSort428<4>(rData, true);
+		storeData(ptr, rData, rArrayLen);
+		ptr += blockUnitLen;
+	}
+	mergeInRegister(data, dataLen, rArrayLen);
+}
+
+void updateMergeSelector(int &selector, rsize_t dataLen)
 {
 	rsize_t blocks = dataLen / blockUnitLen;
 	if (_tzcnt_u64(blocks) & 1) selector ^= 1;
@@ -354,6 +757,11 @@ void updateSelectorGeneral(int &selector, size_t startLen, size_t dataLen)
 {
 	size_t blocks = dataLen / startLen;
 	if (_tzcnt_u64(blocks) & 1) selector ^= 1;
+}
+
+size_t lastPower2(size_t a)
+{
+	return 1 << (64 - _lzcnt_u64(a) - 1);
 }
 
 void mergeSortGeneral(DoubleBuffer<float> &data, size_t dataLen)
@@ -380,5 +788,280 @@ void mergeSortGeneral(DoubleBuffer<float> &data, size_t dataLen)
 		sortedBlockNum = dataLen / sortedBlockLen;
 	}while(sortedBlockNum > 1);
 }
+
+//medianA and medianB are both relative offset.
+void getMedian(float *data, size_t mergeLen, size_t chunkLen,
+			   size_t baseOffset, size_t &medianA, size_t &medianB)
+{
+	size_t minA, maxA;
+	//if chunkA is "shorter" then everything is ok, but if chunkA is "longer",
+	//then care must be taken to prevent medianB get a value that bigger
+	//than the bound of chunkB.
+	//the key is: is mergeLen - (chunkLen - medianB) positive or negative?
+	/*if (mergeLen > (chunkLen - offsetA))
+	{
+		maxA = chunkLen;
+	}
+	else
+	{
+		maxA = offsetA + mergeLen;
+	}
+	if (mergeLen > (chunkLen - offsetB))
+		minA = offsetA + mergeLen - (chunkLen - offsetB);
+	else
+		minA = offsetA;*/
+	maxA = std::min(medianA + mergeLen, chunkLen);
+	minA = medianA + mergeLen - std::min(mergeLen, (chunkLen - medianB));
+	float *blockA = data + baseOffset;
+	float *blockB = data + baseOffset + chunkLen;
+	while(minA + 1 != maxA)
+	{
+		size_t median = (minA + maxA) >> 1;
+		if(blockA[median] <= blockB[mergeLen - median])
+			minA = median;
+		else
+			maxA = median;
+	}
+	size_t resultA = (blockA[minA] <= blockB[mergeLen - maxA])? maxA : minA;
+	medianA = resultA;
+	medianB = mergeLen - resultA;
+}
+
+void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
+							 int chunkNum, size_t blockLen, size_t blockNum,
+							 bool stream)
+{
+	size_t chunkLen = dataLen / chunkNum;
+	float *ptr = dataIn;
+	int pairNum = chunkNum >> 1;
+	int medianNum =  blockNum - pairNum;
+	int mdNumPerPair = medianNum / pairNum;
+	int thdNumPerPair = blockNum / pairNum;
+	size_t *medianA = new size_t[medianNum];
+	size_t *medianB = new size_t[medianNum];
+	//may read much fewer elements than sort, so can compute all medians.
+#pragma omp parallel for
+	for (int j = 0; j < medianNum; ++j)
+	{
+		//length can greater than the length of a chunk.
+		size_t length = (j % mdNumPerPair + 1) * blockLen;
+		int pairIndex = j / mdNumPerPair;
+		size_t baseOffset = pairIndex * chunkLen * 2;
+		size_t mA = 0, mB = 0;
+		getMedian(dataIn, length, chunkLen, baseOffset, mA, mB);
+		medianA[j] = baseOffset + mA;
+		medianB[j] = baseOffset + chunkLen + mB;
+	}
+#pragma omp parallel for
+	for (int j = 0; j < blockNum; ++j)
+	{
+		size_t offsetA[2], offsetB[2];
+		int pairIndex = j / thdNumPerPair;
+		int offset = j % thdNumPerPair;
+		int preThreadNum = pairIndex * mdNumPerPair;
+		size_t baseOffset = pairIndex * chunkLen * 2;
+		int baseIndex = preThreadNum + offset;
+		if (offset)
+		{
+			offsetA[0] = medianA[baseIndex - 1];
+			offsetB[0] = medianB[baseIndex - 1];
+		}
+		else
+		{
+			offsetA[0] = baseOffset;
+			offsetB[0] = baseOffset + chunkLen;
+		}
+		if (offset == (thdNumPerPair - 1))
+		{
+			offsetA[1] = baseOffset + chunkLen;
+			offsetB[1] = offsetA[1] + chunkLen;
+		}
+		else
+		{
+			offsetA[1] = medianA[baseIndex];
+			offsetB[1] = medianB[baseIndex];
+		}
+		//mergeInRegisterUnalign(data, offsetA, offsetB, j * blockLen);
+		simdMergeGeneral(dataIn, dataOut + j * blockLen, offsetA, offsetB,
+						 stream);
+	}
+	delete [] medianA;
+	delete [] medianB;
+}
+
+//chunkNum should be exponent of 2, all chunks must be equal of length. 
+void multiThreadMerge(DoubleBuffer<float> &data, size_t dataLen, int chunkNum,
+					  size_t blockLen, int endChunkNum = 1)
+{
+	int blockNum = dataLen / blockLen;
+	for (int i = chunkNum; i > endChunkNum; i >>= 1)
+	{
+		// size_t chunkLen = dataLen / i;
+		// float *ptr = data.Current();
+		// int pairNum = i >> 1;
+		// int medianNum =  blockNum - pairNum;
+		// int mdNumPerPair = medianNum / pairNum;
+		// int thdNumPerPair = blockNum / pairNum;
+		// size_t *medianA = new size_t[medianNum];
+		// size_t *medianB = new size_t[medianNum];
+		//may read much fewer elements than sort, so can compute all medians.
+// #pragma omp parallel for
+// 		for (int j = 0; j < medianNum; ++j)
+// 		{
+			//length can greater than the length of a chunk.
+			// size_t length = (j % mdNumPerPair + 1) * blockLen;
+			// int pairIndex = j / mdNumPerPair;
+			// size_t baseOffset = pairIndex * chunkLen * 2;
+			//size_t startA, endA;
+			/*if (length > chunkLen)
+			{
+				startA = length - chunkLen;
+				endA = chunkLen;
+			}
+			else
+			{
+				startA = 0;
+				endA = length;
+			}*/
+			/*endA = std::min(length, chunkLen);
+			startA = length - std::min(length, chunkLen);
+			float *blockA = ptr + baseOffset, *blockB = blockA + chunkLen;
+			while (startA + 1 != endA)
+			{
+				//two pointers cannot be added directly, so we use offset here.
+				size_t median = (startA + endA) >> 1;
+				if (*(blockA + median) <= *(blockB + length - median))
+					startA = median;
+				else
+					endA = median;
+			}
+			size_t resultA =
+				(*(blockA+startA) <= *(blockB+length-endA))? endA : startA;
+			medianA[j] = baseOffset + resultA;
+			medianB[j] = baseOffset + chunkLen + length - resultA;*/
+			// size_t mA = 0, mB = 0;
+// 			getMedian(data, length, chunkLen, baseOffset, mA, mB);
+// 			medianA[j] = baseOffset + mA;
+// 			medianB[j] = baseOffset + chunkLen + mB;
+// 		}
+// #pragma omp parallel for
+// 		for (int j = 0; j < blockNum; ++j)
+// 		{
+// 			size_t offsetA[2], offsetB[2];
+// 			int pairIndex = j / thdNumPerPair;
+// 			int offset = j % thdNumPerPair;
+// 			int preThreadNum = pairIndex * mdNumPerPair;
+// 			size_t baseOffset = pairIndex * chunkLen * 2;
+// 			int baseIndex = preThreadNum + offset;
+// 			if (offset)
+// 			{
+// 				offsetA[0] = medianA[baseIndex - 1];
+// 				offsetB[0] = medianB[baseIndex - 1];
+// 			}
+// 			else
+// 			{
+// 				offsetA[0] = baseOffset;
+// 				offsetB[0] = baseOffset + chunkLen;
+// 			}
+// 			if (offset == (thdNumPerPair - 1))
+// 			{
+// 				offsetA[1] = baseOffset + chunkLen;
+// 				offsetB[1] = offsetA[1] + chunkLen;
+// 			}
+// 			else
+// 			{
+// 				offsetA[1] = medianA[baseIndex];
+// 				offsetB[1] = medianB[baseIndex];
+// 			}
+// 			mergeInRegisterUnalign(data, offsetA, offsetB, j * blockLen);
+// 		}
+// 		delete [] medianA;
+// 		delete [] medianB;
+		multiThreadMergeGeneral(data.buffers[data.selector],
+								data.buffers[data.selector ^ 1], dataLen, i,
+								blockLen, blockNum);
+		data.selector ^= 1;
+	}
+}
+
+//solution only for merge several chunks. dataLen, chunkLen, blockLen must all
+//be power of 2.
+void multiThreadMergeChunk(DoubleBuffer<float> &data, size_t dataLen,
+						   int chunkNum, int blockLen)
+{
+	int unitLen = (rArrayLen >> 1) * simdLen;
+	int halfArrayLen = rArrayLen >> 1;
+	int threads = omp_get_max_threads();
+	size_t bufferLen = blockLen * threads;
+	float *bufferA = (float *)_mm_malloc(bufferLen * sizeof(float), 16);
+	float *bufferB = (float *)_mm_malloc(bufferLen * sizeof(float), 16);
+	DoubleBuffer<float> hBuffer(bufferA, bufferB);
+	float *ptrIn = data.Current();
+	float *ptrOut = data.buffers[data.selector ^ 1];
+	do
+	{
+		size_t chunkLen = dataLen / chunkNum;
+		size_t stride = std::min(dataLen, threads * 2 * chunkLen);
+		for (size_t i = 0; i < dataLen; i += stride)
+		{
+			int pairNum = i >> 1;
+			if (pairNum == threads)
+			{
+				float *startA = new float[threads];
+				float *startB = new float[threads];
+				//is here need parallel or not?
+				//#pragma omp parallel for
+				/*for (int k = 0; k < threads; ++k)
+				{
+					startA[k] = k * chunkLen * 2;
+					startB[k] = k * chunkLen * 2 + chunkLen;
+					}*/
+				std::fill(startA, startA + threads, 0);
+				std::fill(startB, startB + threads, 0);
+				for (size_t j = 0; j < stride; j += bufferLen)
+				{
+#pragma omp parallel for
+					for (int k = 0; k < threads; ++k)
+					{
+						__m128 rData[rArrayLen];
+						size_t offsetA[2], offsetB[2];
+						size_t baseOffset = k * chunkLen * 2;
+						offsetA[0] = startA[k] + baseOffset;
+						offsetB[0] = startB[k] + baseOffset + chunkLen;
+						offsetA[1] = startA[k], offsetB[1] = startB[k];
+						getMedian(data.Current(), blockLen, chunkLen,
+								  baseOffset, offsetA[1], offsetB[1]);
+						startA[k] = offsetA[1], startB[k] = offsetB[1];
+						offsetA[1] += baseOffset;
+						offsetB[1] += (baseOffset + chunkLen);
+						simdMergeGeneral(data.Current(),
+										 hBuffer.Current() + k * bufferLen,
+										 offsetA, offsetB);
+					}
+					multiThreadMerge(hBuffer, bufferLen, threads, blockLen, 2);
+					multiThreadMergeGeneral(hBuffer.Current(),
+											data.buffers[data.selector ^ 1] +
+											j * stride,
+											bufferLen, 2, blockLen, threads,
+											false);
+				}
+				delete [] startA;
+				delete [] startB;
+			}
+			else
+			{
+				for (int j = stride / chunkLen; j > 1; j >>= 1)
+				{
+					
+				}
+			}
+			//multi-way merge, the number of chunks is not decreased once by
+			//half.
+			chunkNum -= (stride / chunkLen - 1);
+		}
 		
+	}while(chunkNum > 1);
+	_mm_free(bufferA);
+	_mm_free(bufferB);
+}
 

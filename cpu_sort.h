@@ -39,10 +39,14 @@ struct DoubleBuffer
     }
 };
 
-void updateMergeSelcetor(int &selector, rsize_t dataLen);
+void updateMergeSelector(int &selector, rsize_t dataLen);
 void updateSelectorGeneral(int &selector, size_t startLen, size_t dataLen);
+size_t lastPower2(size_t a);
 void mergeSort(DoubleBuffer<float> &data, rsize_t dataLen);
 void mergeSortGeneral(DoubleBuffer<float> &data, rsize_t dataLen);
+void singleThreadMerge(DoubleBuffer<float> &data, size_t dataLen);
+void multiThreadMerge(DoubleBuffer<float> &data, size_t dataLen, int chunkNum,
+					  size_t blockLen);
 void registerSortIteration(DoubleBuffer<float> &data, rsize_t minStride,
 						   rsize_t dataLen);
 void multiWayMerge(DoubleBuffer<float> &data, rsize_t dataLen,

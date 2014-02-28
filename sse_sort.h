@@ -1,5 +1,5 @@
-#ifndef CPU_SORT_INLINE_H
-#define CPU_SORT_INLINE_H
+#ifndef SSE_SORT_H
+#define SSE_SORT_H
 
 #include <smmintrin.h>
 #include <xmmintrin.h>
@@ -151,6 +151,8 @@ inline void bitonicSort16232(__m128 *data)
     bitonicSort8216<2>(data);
 }
 
+//this function is also necessary, because in some cases the pointer cannot be
+//changed.
 inline void loadData(float *dataIn, __m128 *registers, int len)
 {
     float *ptr = dataIn;
@@ -159,6 +161,15 @@ inline void loadData(float *dataIn, __m128 *registers, int len)
         registers[i] = _mm_load_ps(ptr);
         ptr += simdLen;
     }
+}
+
+inline void loadData(float **dataIn, __m128 *rData, int simdLanes)
+{
+	for (int i = 0; i < simdLanes; ++i)
+	{
+		rData[i] = _mm_load_ps(*dataIn);
+		(*dataIn) += simdLen;
+	}
 }
 
 inline void storeData(float *dataOut, __m128 *registers, int len)
@@ -173,5 +184,24 @@ inline void storeData(float *dataOut, __m128 *registers, int len)
     }
 }
 
+inline void storeData(float **dataOut, __m128 *rData, int simdLanes)
+{
+	for (int i = 0; i < simdLanes; ++i)
+	{
+		_mm_store_ps(*dataOut, rData[i]);
+		(*dataOut) += simdLen;
+	}
+}
+
+inline void streamData(float **dataOut, __m128 *rData, int simdLanes)
+{
+	for (int i = 0; i < simdLanes; ++i)
+	{
+		_mm_stream_ps(*dataOut, rData[i]);
+		(*dataOut) += simdLen;
+	}
+}
+
+void simdOddEvenSort(__m128 *rData);
 void sortInRegister(float *data);
-#endif /* CPU_SORT_INLINE_H */
+#endif //SSE_SORT_H

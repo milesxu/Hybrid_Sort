@@ -12,7 +12,7 @@ typedef size_t rsize_t;
 void GenerateData(int seed, float *data, size_t N)
 {
     boost::minstd_rand generator(seed);
-    boost::uniform_real<float> floatDist(1.0, 6.0);
+    boost::uniform_real<float> floatDist(1.0, 600.0);
     for (size_t i = 0; i < N; i++)
     {
         data[i] = floatDist(generator);
@@ -53,3 +53,23 @@ inline size_t cacheSizeInByte()
     //std::cout << "cache size selected: " << size << std::endl;
     return size;
 }
+
+inline size_t cacheSizeInByte3()
+{
+    size_t size = 0;
+#ifndef _Windows
+    FILE *fptr = 0;
+    fptr = fopen("/sys/devices/system/cpu/cpu0/cache/index3/size", "r");
+    if(fptr)
+    {
+        char size_type;
+        if (fscanf(fptr, "%lu%c", &size, &size_type) != 2)
+            size = 0;
+        if(size_type == 'K') size *= 1024;
+        fclose(fptr);
+    }
+#endif
+    //std::cout << "cache size selected: " << size << std::endl;
+    return size;
+}
+

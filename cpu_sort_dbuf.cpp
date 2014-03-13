@@ -174,36 +174,41 @@ void inline swapFloat(float &a, float &b)
 	b = temp;
 }
 
-void inline loadUnalignData(float *data, size_t &offsetA, size_t &offsetB,
+//TODO: modify to general mode, namely two array pointer, not only one data.
+int inline loadUnalignData(float *data, size_t &offsetA, size_t &offsetB,
 							float *unalignData, int factor, bool start)
 {
-	size_t startA, endA, startB, endB;
+	size_t begin[2], end[2];
 	size_t factornot = ~(factor - 1);
 	if (start)
 	{
-		startA = offsetA;
-		endA = (offsetA + factor) & factornot;
-		startB = offsetB;
-		endB = (offsetB + factor) & factornot;
-		offsetA = endA;
-		offsetB = endB;
+		begin[0] = offsetA;
+		end[0] = (offsetA + factor) & factornot;
+		begin[1] = offsetB;
+		end[1] = (offsetB + factor) & factornot;
+		offsetA = end[0];
+		offsetB = end[1];
 	}
 	else
 	{
-		startA = offsetA & factornot;
-		endA = offsetA;
-		startB = offsetB & factornot;
-		endB = offsetB;
-		offsetA = startA;
-		offsetB = startB;
+		begin[0] = offsetA & factornot;
+		end[0] = offsetA;
+		begin[1] = offsetB & factornot;
+		end[1] = offsetB;
+		offsetA = begin[0];
+		offsetB = begin[1];
 	}
-	int n = 0;
+	int n = 0, selector = (data[begin[0]] > data[begin[1]]);
 	//remember that the value of unalignData cannot be changed here.
-	for (float *ptr = data + startA; ptr < data + endA; ++ptr, ++n)
-		unalignData[n] = *ptr;
-	for (float *ptr = data + startB; ptr < data + endB; ++ptr, ++n)
-		unalignData[n] = *ptr;
-	int lenA = endA - startA;
+	/*for (float *ptr = data + startA; ptr < data + endA; ++ptr, ++n)
+	  unalignData[n] = *ptr;
+	  for (float *ptr = data + startB; ptr < data + endB; ++ptr, ++n)
+	  unalignData[n] = *ptr;*/
+	for (int i = begin[selector]; i < end[selector]; ++i)
+		unalignData[n++] = data[i];
+	for (int i = begin[selector ^ 1]; i < end[selector ^ 1]; ++i)
+		unalignData[n++] = data[i];
+	int lenA = end[selector] - begin[selector];
 	if (lenA % simdLen)
 	{
 		int laneIndex = lenA / simdLen;
@@ -214,12 +219,38 @@ void inline loadUnalignData(float *data, size_t &offsetA, size_t &offsetB,
 		if (ptr[1] > ptr[3]) swapFloat(ptr[1], ptr[3]);
 		if (ptr[1] > ptr[2]) swapFloat(ptr[1], ptr[2]);
 	}
+	return selector;
+	/*for (int i = 0; i < simdLen; ++i)
+	  for (int j = 0; j < (simdLen - 1); ++j)
+	  {
+	  int boffset = i * simdLen;
+	  if (unalignData[boffset + j] > unalignData[boffset + j + 1])
+	  std::cout << "unaligndata sort fail at " << boffset + j << std::endl;
+	  }*/
+}
+
+//If the trail of two lists is unalign because of median computation,
+//we need know where to "insert" the unalign data, to sort them correctly.
+//comparation is only done in one list, because the uValue comes from it and
+//must larger than all the previous keys. offset is the trail of the other
+//list, the return value is number of loops that must be done after unaligned
+//data loaded.
+int getTrailPosition(float *data, size_t bOffset, size_t eOffset, float uValue,
+					 int unitLen)
+{
+	int n = 0;
+	size_t i = eOffset - unitLen;
+	while ((i >= bOffset) && (data[i] >= uValue)) {
+		++n;
+		i -= unitLen;
+	}
+	return n;
 }
 
 //merge two lists into one list. the two list both reside in dataIn, the
 //elements that will be merged is bounded by offset arrays.
 void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
-					  size_t offsetB[2], bool stream = false)
+					  size_t offsetB[2]) //bool stream = false)
 {
 	int unitLen = (rArrayLen >> 1) * simdLen;
 	int halfArrayLen = rArrayLen >> 1;
@@ -228,13 +259,13 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 	*output = dataOut;
 	if (!multipleOf(offsetA[0], unitLen))
 	{
-		float *unalignStart = new float[unitLen];
+		float *unalignStart = (float*)_mm_malloc(unitLen * sizeof(float), 16);
 		loadUnalignData(dataIn, offsetA[0], offsetB[0], unalignStart, unitLen,
 						true);
 		loadData(unalignStart, rData + halfArrayLen, halfArrayLen);
 		bitonicSort428<2>(rData + halfArrayLen, true);
 		bitonicSort8216<1>(rData + halfArrayLen, true);
-		delete [] unalignStart;
+		_mm_free(unalignStart);
 	}
 	else
 	{
@@ -242,19 +273,26 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 				 halfArrayLen);
 		offsetB[0] += unitLen;
 	}
-	size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
+	int tLoop = 0; 
 	float *unalignEnd = NULL;
 	if (!multipleOf(offsetA[1], unitLen))
 	{
-		unalignEnd = new float[unitLen];
-		loadUnalignData(dataIn, offsetA[1], offsetB[1], unalignEnd,
-						unitLen, false);
-		--loop;
+		unalignEnd = (float*)_mm_malloc(unitLen * sizeof(float), 16);
+		int selector = loadUnalignData(dataIn, offsetA[1], offsetB[1],
+									   unalignEnd, unitLen, false);
+		if (selector)
+			tLoop = getTrailPosition(dataIn, offsetA[0], offsetA[1],
+									 unalignEnd[0], unitLen);
+		else
+			tLoop = getTrailPosition(dataIn, offsetB[0], offsetB[1],
+			unalignEnd[0], unitLen);
 	}
+	size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
+	loop -= tLoop;
 	float *blocks[2], *blockBound[2];
 	blocks[0] = dataIn + offsetA[0], blocks[1] = dataIn + offsetB[0];
 	blockBound[0] = dataIn + offsetA[1], blockBound[1] = dataIn + offsetB[1];
-	if (stream)
+	/*if (stream)
 	{
 		for (size_t i = 0; i < loop; ++i)
 		{
@@ -273,27 +311,37 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 		}
 		else
 			streamData(output, rData + halfArrayLen, halfArrayLen);
-	}
-	else
+	}*/
+	for (size_t i = 0; i < loop; ++i)
 	{
-		for (size_t i = 0; i < loop; ++i)
+		loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
+		bitonicSort16232(rData);
+		storeData(output, rData, halfArrayLen);
+	}
+	bool ua = false;
+	if (unalignEnd != NULL)
+	{
+		loadData(unalignEnd, rData, halfArrayLen);
+		bitonicSort428<2>(rData, true);
+		bitonicSort8216<1>(rData, true);
+		bitonicSort16232(rData);
+		storeData(output, rData, halfArrayLen);
+		_mm_free(unalignEnd);
+		for (int i = 0; i < tLoop; ++i)
 		{
+			ua = true;
 			loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
 			bitonicSort16232(rData);
 			storeData(output, rData, halfArrayLen);
 		}
-		if (unalignEnd != NULL)
-		{
-			loadData(unalignEnd, rData, halfArrayLen);
-			bitonicSort428<2>(rData, true);
-			bitonicSort8216<1>(rData, true);
-			bitonicSort16232(rData);
-			storeData(output, rData, rArrayLen);
-			delete [] unalignEnd;
-		}
-		else
-			storeData(output, rData + halfArrayLen, halfArrayLen);
 	}
+	storeData(output, rData + halfArrayLen, halfArrayLen);
+	/*size_t length = offsetA[1] + offsetB[1] - offsetA[0] - offsetB[0];
+	  std::cout << length << std::endl;*/
+	for (size_t i = 0; i < 65535; ++i)
+		if (dataOut[i] > dataOut[i + 1])
+		std::cout << "simd sort fail at: " << i << " " << ua << " " << tLoop << std::endl;
+	//if (tLoop) std::cout << tLoop << std::endl;
 }
 
 void mergeInRegisterUnalignBuffer(DoubleBuffer<float> &data,
@@ -793,6 +841,9 @@ void mergeSortGeneral(DoubleBuffer<float> &data, size_t dataLen)
 void getMedian(float *data, size_t mergeLen, size_t chunkLen,
 			   size_t baseOffset, size_t &medianA, size_t &medianB)
 {
+	bool equalt = ((mergeLen % 65536) == 0);
+	//std::cout << mergeLen << " " << equalt << std::endl;
+	size_t startA = medianA, startB = medianB;
 	size_t minA, maxA;
 	//if chunkA is "shorter" then everything is ok, but if chunkA is "longer",
 	//then care must be taken to prevent medianB get a value that bigger
@@ -825,14 +876,19 @@ void getMedian(float *data, size_t mergeLen, size_t chunkLen,
 	size_t resultA = (blockA[minA] <= blockB[mergeLen - maxA])? maxA : minA;
 	medianA = resultA;
 	medianB = mergeLen - resultA;
+	/*std::cout << mergeLen << std::endl;
+	if ((medianB + medianA - startA - startB) == mergeLen)
+		std::cout << "true" << std::endl;
+	else
+	std::cout << "false" << std::endl;*/
 }
 
 void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
-							 int chunkNum, size_t blockLen, size_t blockNum,
-							 bool stream)
+							 int chunkNum, size_t blockLen)
 {
+	int blockNum = dataLen / blockLen;
 	size_t chunkLen = dataLen / chunkNum;
-	float *ptr = dataIn;
+	//float *ptr = dataIn;
 	int pairNum = chunkNum >> 1;
 	int medianNum =  blockNum - pairNum;
 	int mdNumPerPair = medianNum / pairNum;
@@ -840,7 +896,7 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 	size_t *medianA = new size_t[medianNum];
 	size_t *medianB = new size_t[medianNum];
 	//may read much fewer elements than sort, so can compute all medians.
-#pragma omp parallel for
+	//#pragma omp parallel for
 	for (int j = 0; j < medianNum; ++j)
 	{
 		//length can greater than the length of a chunk.
@@ -852,7 +908,10 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 		medianA[j] = baseOffset + mA;
 		medianB[j] = baseOffset + chunkLen + mB;
 	}
-#pragma omp parallel for
+	//for (int k = 0; k < medianNum; ++k)
+	//std::cout << medianA[k] << " " << medianB[k] << std::endl;
+	std::cout << std::endl << std::endl;
+	//#pragma omp parallel for
 	for (int j = 0; j < blockNum; ++j)
 	{
 		size_t offsetA[2], offsetB[2];
@@ -882,8 +941,8 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 			offsetB[1] = medianB[baseIndex];
 		}
 		//mergeInRegisterUnalign(data, offsetA, offsetB, j * blockLen);
-		simdMergeGeneral(dataIn, dataOut + j * blockLen, offsetA, offsetB,
-						 stream);
+		//std::cout << thdNumPerPair << " " << chunkLen << " " << baseOffset << " " << pairIndex << " " << offset << " " << j << " " << offsetB[1] + offsetA[1] - offsetA[0] - offsetB[0] << "---------" << std::endl;
+		simdMergeGeneral(dataIn, dataOut + j * blockLen, offsetA, offsetB);
 	}
 	delete [] medianA;
 	delete [] medianB;
@@ -891,10 +950,10 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 
 //chunkNum should be exponent of 2, all chunks must be equal of length. 
 void multiThreadMerge(DoubleBuffer<float> &data, size_t dataLen, int chunkNum,
-					  size_t blockLen, int endChunkNum = 1)
+					  size_t blockLen)
 {
-	int blockNum = dataLen / blockLen;
-	for (int i = chunkNum; i > endChunkNum; i >>= 1)
+	//int blockNum = dataLen / blockLen;
+	for (int i = chunkNum; i > 1; i >>= 1)
 	{
 		// size_t chunkLen = dataLen / i;
 		// float *ptr = data.Current();
@@ -979,8 +1038,12 @@ void multiThreadMerge(DoubleBuffer<float> &data, size_t dataLen, int chunkNum,
 // 		delete [] medianB;
 		multiThreadMergeGeneral(data.buffers[data.selector],
 								data.buffers[data.selector ^ 1], dataLen, i,
-								blockLen, blockNum);
+								blockLen);
 		data.selector ^= 1;
+		for (size_t j = 0; j < dataLen; j += dataLen * 2 / i)
+			for (size_t k = j; k < j - 1 + dataLen * 2 / i; ++k)
+				if(*(data.Current() + k) > *(data.Current() + k + 1))
+					std::cout << "sort fail at " << i <<" " << k << std::endl;
 	}
 }
 
@@ -1038,12 +1101,11 @@ void multiThreadMergeChunk(DoubleBuffer<float> &data, size_t dataLen,
 										 hBuffer.Current() + k * bufferLen,
 										 offsetA, offsetB);
 					}
-					multiThreadMerge(hBuffer, bufferLen, threads, blockLen, 2);
+					multiThreadMerge(hBuffer, bufferLen, threads, blockLen);
 					multiThreadMergeGeneral(hBuffer.Current(),
 											data.buffers[data.selector ^ 1] +
 											j * stride,
-											bufferLen, 2, blockLen, threads,
-											false);
+											bufferLen, 2, blockLen);
 				}
 				delete [] startA;
 				delete [] startB;

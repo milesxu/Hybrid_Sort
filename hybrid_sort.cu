@@ -47,6 +47,7 @@ struct hybridDispatchParams3
 	size_t gpuChunkLen;
 	size_t cpuChunkLen;
 	size_t cpuBlockLen;
+	int threads;
 	/*size_t multiwayBlockSize;
 	size_t gpuMergeLen;
 	size_t gpuMultiwayLen;*/
@@ -54,10 +55,11 @@ struct hybridDispatchParams3
 	//now, dataLen must be power of 2.
 	hybridDispatchParams3(size_t dataLen)
 	{
+		threads = omp_get_max_threads();
 		size_t cache3Byte = cacheSizeInByte3() / (2 * sizeof(T));
 		cpuChunkLen = std::min(dataLen, lastPower2(cache3Byte));
 		gpuChunkLen = dataLen > cpuChunkLen? cpuChunkLen : 0;
-		cpuBlockLen = cpuChunkLen / omp_get_max_threads();
+		cpuBlockLen = cpuChunkLen / threads;
 	}
 };
 
@@ -95,7 +97,7 @@ int main(int argc, char **argv)
 		delete [] data;
 		//std::cout << "loop time: " << dlf << std::endl;
 		}*/
-	dataLen = 1 << 19;
+	dataLen = 1 << 23;
 	float *data = new float[dataLen];
 	GenerateData(seed, data, dataLen);
 	hybrid_sort3(data, dataLen);
@@ -453,6 +455,48 @@ void multiWayStage(DoubleBuffer<float> &data, size_t dataLen,
 	delete [] upperBound;
 }
 
+void chunkMerge(DoubleBuffer<float> &data, size_t dataLen,
+				hybridDispatchParams3<float> &params)
+{
+	for (size_t i = 0; i < dataLen; i += params.cpuChunkLen)
+	{
+#pragma omp parallel for
+		for (size_t j = i; j < i + params.cpuChunkLen; j += params.cpuBlockLen)
+		{
+			DoubleBuffer<float> block(data.buffers[data.selector] + j,
+									  data.buffers[data.selector ^ 1] + j);
+			singleThreadMerge(block, params.cpuBlockLen);
+		}
+		DoubleBuffer<float> chunk(data.buffers[data.selector] + i,
+								  data.buffers[data.selector ^ 1] + i);
+		updateSelectorGeneral(chunk.selector, 8, params.cpuBlockLen);
+		multiThreadMerge(chunk, params.cpuChunkLen, params.threads,
+						 params.cpuBlockLen);
+	}
+	updateSelectorGeneral(data.selector, 8, params.cpuChunkLen);
+	//for (size_t i = 0; i < dataLen; i += params.cpuChunkLen)
+	//resultTest(data.buffers[data.selector] + i, params.cpuChunkLen);
+}
+
+void medianMerge(DoubleBuffer<float> &data, size_t dataLen,
+				 hybridDispatchParams3<float> &params)
+{
+	int chunkNum = dataLen / params.cpuChunkLen;
+	size_t stride = params.cpuChunkLen << 1;
+	while (chunkNum > 1)
+	{
+		for (size_t j = 0; j < dataLen; j += stride)
+		{
+			DoubleBuffer<float> chunk(data.buffers[data.selector] + j,
+									  data.buffers[data.selector ^ 1] + j);
+			multiThreadMerge(chunk, stride, 2, params.cpuBlockLen);
+		}
+		chunkNum >>= 1;
+		stride <<= 1;
+		data.selector ^= 1;
+	}
+}
+
 void hybrid_sort(float *data, size_t dataLen)
 {
 	std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
@@ -471,8 +515,8 @@ void hybrid_sort(float *data, size_t dataLen)
 	//resultTest(hdata.buffers[hdata.selector] + params.gpuMultiwayLen, dataLen - params.gpuMultiwayLen);
 	//std::cout << params.gpuChunkSize << std::endl;
 	/*std::copy(data, data + dataLen, dataIn);
-	gpu_sort(dataIn, dataLen, dataLen / 8);
-	cudaDeviceSynchronize();*/
+	  gpu_sort(dataIn, dataLen, dataLen / 8);
+	  cudaDeviceSynchronize();*/
 	
 	const int test_time = 0;
 	rFile << boost::format("%1%%|15t|") % "cache factor"
@@ -496,21 +540,21 @@ void hybrid_sort(float *data, size_t dataLen)
 			{
 				//double start, end;
 				/*std::copy(data, data + dataLen, dataIn);
-				start = omp_get_wtime();
-				cuda_time += gpu_sort(dataIn, dataLen, chunk_size);
-				cudaDeviceSynchronize();
-				end = omp_get_wtime();
-				gpu_time += (end - start);*/
+				  start = omp_get_wtime();
+				  cuda_time += gpu_sort(dataIn, dataLen, chunk_size);
+				  cudaDeviceSynchronize();
+				  end = omp_get_wtime();
+				  gpu_time += (end - start);*/
 				/*std::copy(data, data + dataLen, dataIn);
-				hdata.selector = 0;
-				start = omp_get_wtime();
-				mergeStage(hdata, dataLen, chunk_size, block_size);
-				end = omp_get_wtime();
-				merge_time += (end - start);
-				start = omp_get_wtime();
-				multiWayStage(hdata, dataLen, chunk_size, block_size);
-				end = omp_get_wtime();
-				multiway_time += (end - start);*/
+				  hdata.selector = 0;
+				  start = omp_get_wtime();
+				  mergeStage(hdata, dataLen, chunk_size, block_size);
+				  end = omp_get_wtime();
+				  merge_time += (end - start);
+				  start = omp_get_wtime();
+				  multiWayStage(hdata, dataLen, chunk_size, block_size);
+				  end = omp_get_wtime();
+				  multiway_time += (end - start);*/
 			}
 			// rFile << boost::format("%1%%|15t|") % j
 			// 	  << boost::format("%1%%|15t|") % block_size
@@ -520,7 +564,6 @@ void hybrid_sort(float *data, size_t dataLen)
 			// 	<< boost::format("%1%%|15t|") % (gpu_time / test_time)
 			// 	<< boost::format("%1%%|15t|") % (cuda_time / test_time)
 			// 	  << std::endl;
-			
 		}
 	}
 	_mm_free(dataIn);
@@ -537,38 +580,8 @@ void hybrid_sort3(float *data, size_t dataLen)
 	DoubleBuffer<float> hdata(dataIn, dataOut);
 	
 	hybridDispatchParams3<float> params(dataLen);
-	for (size_t i = 0; i < dataLen; i += params.cpuChunkLen)
-	{
-#pragma omp parallel for
-		for (size_t j = i; j < i + params.cpuChunkLen; j += params.cpuBlockLen)
-		{
-			DoubleBuffer<float> block(hdata.buffers[hdata.selector] + j,
-									  hdata.buffers[hdata.selector ^ 1] + j);
-			singleThreadMerge(block, params.cpuBlockLen);
-		}
-		DoubleBuffer<float> chunk(hdata.buffers[hdata.selector] + i,
-								  hdata.buffers[hdata.selector ^ 1] + i);
-		updateSelectorGeneral(chunk.selector, 8, params.cpuBlockLen);
-		multiThreadMerge(chunk, params.cpuChunkLen,
-						 params.cpuChunkLen / params.cpuBlockLen,
-						 params.cpuBlockLen);
-		std::cout << "multi-thread merge complete." << std::endl;
-	}
-	updateSelectorGeneral(hdata.selector, 8, params.cpuChunkLen);
-	for (size_t j  = 0; j < dataLen; j += params.cpuChunkLen)
-		resultTest(hdata.buffers[hdata.selector] + j, params.cpuChunkLen);
-	int loop = dataLen / params.cpuChunkLen - 1;
-	size_t stride = params.cpuChunkLen << 1;
-	for (int i = 0; i < loop; ++i)
-	{
-		for (size_t j = 0; j < dataLen; j += stride)
-		{
-			DoubleBuffer<float> chunk(hdata.buffers[hdata.selector] + j,
-									  hdata.buffers[hdata.selector ^ 1] + j);
-			multiThreadMerge(chunk, stride, 2, params.cpuBlockLen);
-		}
-		stride <<= 1;
-	}
+	chunkMerge(hdata, dataLen, params);
+	medianMerge(hdata, dataLen, params);
 	resultTest(hdata.Current(), dataLen);
 	_mm_free(dataIn);
 	_mm_free(dataOut);

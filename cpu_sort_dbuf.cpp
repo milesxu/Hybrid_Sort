@@ -240,11 +240,24 @@ int getTrailPosition(float *data, size_t bOffset, size_t eOffset, float uValue,
 {
 	int n = 0;
 	size_t i = eOffset - unitLen;
-	while ((i >= bOffset) && (data[i] >= uValue)) {
-		++n;
-		i -= unitLen;
+	while (i >= bOffset) {
+		if (data[i] > uValue)
+		{
+			++n;
+			i -= unitLen;
+		}
+		else
+			break;
 	}
 	return n;
+}
+
+//only used by 16 to 32 merge loop, namely only two lists merge to one list.
+//must be used as a mediate process, rData must be copied a half, and must be
+//empty after this process complete.
+void simdMergeLoop2(float *dataIn, float *dataOut, float **blocks,
+					float **blockBound, __m128 *rData, int lanes, int unitLen)
+{
 }
 
 //merge two lists into one list. the two list both reside in dataIn, the
@@ -338,9 +351,9 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 	storeData(output, rData + halfArrayLen, halfArrayLen);
 	/*size_t length = offsetA[1] + offsetB[1] - offsetA[0] - offsetB[0];
 	  std::cout << length << std::endl;*/
-	for (size_t i = 0; i < 65535; ++i)
+	/*for (size_t i = 0; i < 65535; ++i)
 		if (dataOut[i] > dataOut[i + 1])
-		std::cout << "simd sort fail at: " << i << " " << ua << " " << tLoop << std::endl;
+		std::cout << "simd sort fail at: " << i << " " << ua << " " << tLoop << " " << (*output - dataOut) << " " << dataOut[i] - dataOut[i + 1] << std::endl;*/
 	//if (tLoop) std::cout << tLoop << std::endl;
 }
 
@@ -910,7 +923,7 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 	}
 	//for (int k = 0; k < medianNum; ++k)
 	//std::cout << medianA[k] << " " << medianB[k] << std::endl;
-	std::cout << std::endl << std::endl;
+	//std::cout << std::endl << std::endl;
 	//#pragma omp parallel for
 	for (int j = 0; j < blockNum; ++j)
 	{
@@ -1040,10 +1053,10 @@ void multiThreadMerge(DoubleBuffer<float> &data, size_t dataLen, int chunkNum,
 								data.buffers[data.selector ^ 1], dataLen, i,
 								blockLen);
 		data.selector ^= 1;
-		for (size_t j = 0; j < dataLen; j += dataLen * 2 / i)
+		/*for (size_t j = 0; j < dataLen; j += dataLen * 2 / i)
 			for (size_t k = j; k < j - 1 + dataLen * 2 / i; ++k)
 				if(*(data.Current() + k) > *(data.Current() + k + 1))
-					std::cout << "sort fail at " << i <<" " << k << std::endl;
+				std::cout << "sort fail at " << i <<" " << k << std::endl;*/
 	}
 }
 

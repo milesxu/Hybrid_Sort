@@ -69,18 +69,20 @@ void gpu_sort_serial(float *data, size_t dataLen, size_t blockLen);
 void gpu_sort_test(float *data, rsize_t dataLen);
 float *cpu_sort_sse_parallel(DoubleBuffer<float> &data, rsize_t dataLen);
 void hybrid_sort(float *data, size_t dataLen);
-void hybrid_sort3(float *data, size_t dataLen);
+void hybrid_sort3(float *data, size_t dataLen, double (&results)[2]);
+void mergeTest(size_t minLen, size_t maxLen, int seed);
 
 int main(int argc, char **argv)
 {
 	rsize_t dataLen = (1 << dlFactor) * chunkFactor; //default length of sorted data
-	int seed = 1979102303;  //default seed for generate random data sequence
+	int seed = 1979090303;  //default seed for generate random data sequence
 	//std::cout << omp_get_max_threads() << std::endl;
 	CommandLineArgs args(argc, argv);
 	args.GetCmdLineArgument("l", dataLen);
 	args.GetCmdLineArgument("s", seed);
 	//std::cout << dataLen << " " << seed << "\n";
 	args.DeviceInit();
+	mergeTest(1<<16, 1<<30, seed);
 	/*float *data = new float[dataLen];
 	GenerateData(seed, data, dataLen);
 	gpu_sort_test(data, dataLen);
@@ -97,11 +99,11 @@ int main(int argc, char **argv)
 		delete [] data;
 		//std::cout << "loop time: " << dlf << std::endl;
 		}*/
-	dataLen = 1 << 23;
+	/*dataLen = 1 << 23;
 	float *data = new float[dataLen];
 	GenerateData(seed, data, dataLen);
 	hybrid_sort3(data, dataLen);
-	delete [] data;
+	delete [] data;*/
 	std::cout << "test complete." << std::endl;
 	//resultTest(cpu_sort_sse_parallel(hdata, dataLen), dataLen);
 	//resultTest(mergeSortInBlockParallel(dataIn, dataOut, dataLen), dataLen);
@@ -572,7 +574,7 @@ void hybrid_sort(float *data, size_t dataLen)
 	rFile.close();
 }
 
-void hybrid_sort3(float *data, size_t dataLen)
+void hybrid_sort3(float *data, size_t dataLen, double (&results)[2])
 {
 	float* dataIn = (float*)_mm_malloc(dataLen * sizeof(float), 16);
 	float* dataOut= (float*)_mm_malloc(dataLen * sizeof(float), 16);
@@ -583,6 +585,52 @@ void hybrid_sort3(float *data, size_t dataLen)
 	chunkMerge(hdata, dataLen, params);
 	medianMerge(hdata, dataLen, params);
 	resultTest(hdata.Current(), dataLen);
+	
+	const int test_time = 1;
+	double cmerge = 0.0, mmerge = 0.0;
+	for (int i = 0; i < test_time; ++i)
+	{
+		std::copy(data, data + dataLen, dataIn);
+		std::fill(dataOut, dataOut + dataLen, 0);
+		hdata.selector = 0;
+		double start, end;
+		start = omp_get_wtime();
+		chunkMerge(hdata, dataLen, params);
+		end = omp_get_wtime();
+		cmerge += (end - start);
+		start = omp_get_wtime();
+		medianMerge(hdata, dataLen, params);
+		end = omp_get_wtime();
+		mmerge += (end - start);
+	}
+	results[0] = cmerge / test_time, results[1] = mmerge / test_time;
 	_mm_free(dataIn);
 	_mm_free(dataOut);
+}
+
+void mergeTest(size_t minLen, size_t maxLen, int seed)
+{
+	std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
+						std::ios::app);
+	if (rFile.is_open()) 
+		rFile << boost::format("%1%%|15t|") % "data length"
+			  << boost::format("%1%%|15t|") % "chunk merge"
+			  << boost::format("%1%%|15t|") % "median merge"
+			  << std::endl;
+	
+	float *data = new float[maxLen];
+	GenerateData(seed, data, maxLen);
+	//Now, all length of data lists must be power of 2.
+	for (size_t dataLen = minLen; dataLen <= maxLen; dataLen <<= 1)
+	{
+		double results[2];
+		hybrid_sort3(data, dataLen, results);
+		rFile << boost::format("%1%%|15t|") % dataLen
+			  << boost::format("%1%%|15t|") % results[0]
+			  << boost::format("%1%%|15t|") % results[1]
+			  << std::endl;
+	}
+	delete [] data;
+	rFile << std::endl << std::endl;
+	rFile.close();
 }

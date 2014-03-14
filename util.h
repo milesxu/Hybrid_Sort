@@ -12,7 +12,7 @@ typedef size_t rsize_t;
 void GenerateData(int seed, float *data, size_t N)
 {
     boost::minstd_rand generator(seed);
-    boost::uniform_real<float> floatDist(1.0, 600.0);
+    boost::uniform_real<float> floatDist(1.0, 6.0);
     for (size_t i = 0; i < N; i++)
     {
         data[i] = floatDist(generator);

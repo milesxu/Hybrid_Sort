@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 	args.GetCmdLineArgument("s", seed);
 	//std::cout << dataLen << " " << seed << "\n";
 	args.DeviceInit();
-	mergeTest(1<<16, 1<<30, seed);
+	mergeTest(1<<16, 1<<20, seed);
 	/*float *data = new float[dataLen];
 	GenerateData(seed, data, dataLen);
 	gpu_sort_test(data, dataLen);

@@ -255,9 +255,49 @@ int getTrailPosition(float *data, size_t bOffset, size_t eOffset, float uValue,
 //only used by 16 to 32 merge loop, namely only two lists merge to one list.
 //must be used as a mediate process, rData must be copied a half, and must be
 //empty after this process complete.
-void simdMergeLoop2(float *dataIn, float *dataOut, float **blocks,
-					float **blockBound, __m128 *rData, int lanes, int unitLen)
+void simdMergeLoop2(__m128 *rData, float **dataOut, float **blocks,
+					float **blockBound, int lanes, int unitLen)
 {
+	size_t loop =
+		((blockBound[0] - blocks[0]) + (blockBound[1] -blocks[1])) / unitLen;
+	if ((blocks[0] != blockBound[0]) && (blocks[1] != blockBound[1]))
+	{
+		int selector = (*(blockBound[0] - unitLen) > *(blockBound[1] - unitLen));
+		/*float minBound = *(blockBound[selector] - unitLen);
+		std::cout << minBound << "--" << std::endl;*/
+		//float *test = blockBound[selector ^ 1] - unitLen;
+		/*while (test != blocks[selector ^ 1]) {
+			if (minBound > *test)
+				break;
+			else
+			{
+				test -= unitLen;
+				--loop;
+			}
+			}*/
+		//selected list have higher priority to load data to simd registers.
+		//for (size_t i = 0; i < loop; ++i)
+		while (blocks[selector] != blockBound[selector])
+		{
+			int temps = ((*(blocks[selector]) > *(blocks[selector ^ 1])) ^ selector);
+			loadData(blocks + temps, rData, lanes);
+			bitonicSort16232(rData);
+			storeData(dataOut, rData, lanes);
+		}
+	}
+	int selector = (blocks[0] == blockBound[0]);
+	for (float *ptr = blocks[selector]; ptr < blockBound[selector];
+		 ptr += unitLen)
+	{
+		loadData(ptr, rData, lanes);
+		bitonicSort16232(rData);
+		storeData(dataOut, rData, lanes);
+	}
+	float *ptr = *dataOut;
+	for (size_t i = 1; i < loop * unitLen; ++i)
+	{
+		if (*(ptr - i) < *(ptr -i - 1)) std::cout << "simd loop fail at " << i << std::endl;
+	}
 }
 
 //merge two lists into one list. the two list both reside in dataIn, the
@@ -286,12 +326,12 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 				 halfArrayLen);
 		offsetB[0] += unitLen;
 	}
-	int tLoop = 0; 
+	int tLoop = 0, selector; 
 	float *unalignEnd = NULL;
 	if (!multipleOf(offsetA[1], unitLen))
 	{
 		unalignEnd = (float*)_mm_malloc(unitLen * sizeof(float), 16);
-		int selector = loadUnalignData(dataIn, offsetA[1], offsetB[1],
+		selector = loadUnalignData(dataIn, offsetA[1], offsetB[1],
 									   unalignEnd, unitLen, false);
 		if (selector)
 			tLoop = getTrailPosition(dataIn, offsetA[0], offsetA[1],
@@ -300,38 +340,21 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 			tLoop = getTrailPosition(dataIn, offsetB[0], offsetB[1],
 			unalignEnd[0], unitLen);
 	}
-	size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
-	loop -= tLoop;
+	//size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
+	//loop -= tLoop;
 	float *blocks[2], *blockBound[2];
 	blocks[0] = dataIn + offsetA[0], blocks[1] = dataIn + offsetB[0];
 	blockBound[0] = dataIn + offsetA[1], blockBound[1] = dataIn + offsetB[1];
-	/*if (stream)
-	{
-		for (size_t i = 0; i < loop; ++i)
-		{
-			loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
-			bitonicSort16232(rData);
-			streamData(output, rData, halfArrayLen);
-		}
-		if (unalignEnd != NULL)
-		{
-			loadData(unalignEnd, rData, halfArrayLen);
-			bitonicSort428<2>(rData, true);
-			bitonicSort8216<1>(rData, true);
-			bitonicSort16232(rData);
-			streamData(output, rData, rArrayLen);
-			delete [] unalignEnd;
-		}
-		else
-			streamData(output, rData + halfArrayLen, halfArrayLen);
-	}*/
-	for (size_t i = 0; i < loop; ++i)
+	//blockBound[selector ^ 1] -= (tLoop * unitLen);
+	/*for (size_t i = 0; i < loop; ++i)
 	{
 		loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
 		bitonicSort16232(rData);
 		storeData(output, rData, halfArrayLen);
-	}
-	bool ua = false;
+		}*/
+	simdMergeLoop2(rData, output, blocks, blockBound, halfArrayLen, unitLen);
+	//blockBound[selector ^ 1] += (tLoop * unitLen);
+	//bool ua = false;
 	if (unalignEnd != NULL)
 	{
 		loadData(unalignEnd, rData, halfArrayLen);
@@ -340,13 +363,14 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 		bitonicSort16232(rData);
 		storeData(output, rData, halfArrayLen);
 		_mm_free(unalignEnd);
-		for (int i = 0; i < tLoop; ++i)
+		/*for (int i = 0; i < tLoop; ++i)
 		{
 			ua = true;
 			loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
 			bitonicSort16232(rData);
 			storeData(output, rData, halfArrayLen);
-		}
+			}*/
+		simdMergeLoop2(rData, output, blocks, blockBound, halfArrayLen, unitLen);
 	}
 	storeData(output, rData + halfArrayLen, halfArrayLen);
 	/*size_t length = offsetA[1] + offsetB[1] - offsetA[0] - offsetB[0];

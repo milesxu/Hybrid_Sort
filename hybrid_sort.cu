@@ -49,8 +49,8 @@ struct hybridDispatchParams3
 	size_t cpuBlockLen;
 	int threads;
 	/*size_t multiwayBlockSize;
-	size_t gpuMergeLen;
-	size_t gpuMultiwayLen;*/
+	  size_t gpuMergeLen;
+	  size_t gpuMultiwayLen;*/
 	
 	//now, dataLen must be power of 2.
 	hybridDispatchParams3(size_t dataLen)
@@ -82,44 +82,44 @@ int main(int argc, char **argv)
 	args.GetCmdLineArgument("s", seed);
 	//std::cout << dataLen << " " << seed << "\n";
 	args.DeviceInit();
-	mergeTest(1<<16, 1<<20, seed);
+	mergeTest(1<<16, 1<<30, seed);
 	/*float *data = new float[dataLen];
-	GenerateData(seed, data, dataLen);
-	gpu_sort_test(data, dataLen);
-	gpu_sort_serial(data, dataLen, dataLen);
-	delete [] data;*/
+	  GenerateData(seed, data, dataLen);
+	  gpu_sort_test(data, dataLen);
+	  gpu_sort_serial(data, dataLen, dataLen);
+	  delete [] data;*/
 	//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 	/*for (int dlf = 20; dlf < 26; ++dlf)
-	{
-		dataLen = 1 << dlf;
-		std::cout << "data length: " << dataLen << std::endl;
-		float *data = new float[dataLen];
-		GenerateData(seed, data, dataLen);
-		hybrid_sort(data, dataLen);
-		delete [] data;
-		//std::cout << "loop time: " << dlf << std::endl;
-		}*/
+	  {
+	  dataLen = 1 << dlf;
+	  std::cout << "data length: " << dataLen << std::endl;
+	  float *data = new float[dataLen];
+	  GenerateData(seed, data, dataLen);
+	  hybrid_sort(data, dataLen);
+	  delete [] data;
+	  //std::cout << "loop time: " << dlf << std::endl;
+	  }*/
 	/*dataLen = 1 << 23;
-	float *data = new float[dataLen];
-	GenerateData(seed, data, dataLen);
-	hybrid_sort3(data, dataLen);
-	delete [] data;*/
+	  float *data = new float[dataLen];
+	  GenerateData(seed, data, dataLen);
+	  hybrid_sort3(data, dataLen);
+	  delete [] data;*/
 	std::cout << "test complete." << std::endl;
 	//resultTest(cpu_sort_sse_parallel(hdata, dataLen), dataLen);
 	//resultTest(mergeSortInBlockParallel(dataIn, dataOut, dataLen), dataLen);
 	//gpu_sort(dataIn, dataLen, dataLen >> 2);
 	//gpu_sort_serial(dataIn, dataLen, dataLen >>2);
-		/*#pragma omp parallel
-		  {
-		omp_set_nested(1);
-#pragma omp single nowait
-std::cout << "single run" << omp_get_nested() << std::endl;
-		gpu_sort(data, dataLen);
-		#pragma omp single
-		  resultTest(data, dataLen);
-		  #pragma omp parallel
-		  std::cout << omp_get_thread_num();
-		}*/
+	/*#pragma omp parallel
+	  {
+	  omp_set_nested(1);
+	  #pragma omp single nowait
+	  std::cout << "single run" << omp_get_nested() << std::endl;
+	  gpu_sort(data, dataLen);
+	  #pragma omp single
+	  resultTest(data, dataLen);
+	  #pragma omp parallel
+	  std::cout << omp_get_thread_num();
+	  }*/
 	return 0;
 }
 
@@ -472,12 +472,14 @@ void chunkMerge(DoubleBuffer<float> &data, size_t dataLen,
 		DoubleBuffer<float> chunk(data.buffers[data.selector] + i,
 								  data.buffers[data.selector ^ 1] + i);
 		updateSelectorGeneral(chunk.selector, 8, params.cpuBlockLen);
+		/*for (size_t i = 0; i < params.cpuChunkLen; i += params.cpuBlockLen)
+			resultTest(chunk.Current() + i, params.cpuBlockLen);*/
 		multiThreadMerge(chunk, params.cpuChunkLen, params.threads,
 						 params.cpuBlockLen);
 	}
 	updateSelectorGeneral(data.selector, 8, params.cpuChunkLen);
-	//for (size_t i = 0; i < dataLen; i += params.cpuChunkLen)
-	//resultTest(data.buffers[data.selector] + i, params.cpuChunkLen);
+	/*for (size_t i = 0; i < dataLen; i += params.cpuChunkLen)
+	  resultTest(data.buffers[data.selector] + i, params.cpuChunkLen);*/
 }
 
 void medianMerge(DoubleBuffer<float> &data, size_t dataLen,
@@ -586,7 +588,7 @@ void hybrid_sort3(float *data, size_t dataLen, double (&results)[2])
 	medianMerge(hdata, dataLen, params);
 	resultTest(hdata.Current(), dataLen);
 	
-	const int test_time = 1;
+	const int test_time = 30;
 	double cmerge = 0.0, mmerge = 0.0;
 	for (int i = 0; i < test_time; ++i)
 	{

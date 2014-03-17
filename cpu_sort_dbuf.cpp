@@ -126,8 +126,8 @@ void mergeInRegister(DoubleBuffer<float> &data, size_t dataLen, size_t blockLen)
 			storeSimdData(rData, output, rArrayLen, 1, 1);
 		}
 		/*delete [] blocks;
-		delete [] blockBound;
-		delete [] output;*/
+		  delete [] blockBound;
+		  delete [] output;*/
 		data.selector ^= 1;
 	}
 	//delete [] rData;
@@ -176,7 +176,7 @@ void inline swapFloat(float &a, float &b)
 
 //TODO: modify to general mode, namely two array pointer, not only one data.
 int inline loadUnalignData(float *data, size_t &offsetA, size_t &offsetB,
-							float *unalignData, int factor, bool start)
+						   float *unalignData, int factor, bool start)
 {
 	size_t begin[2], end[2];
 	size_t factornot = ~(factor - 1);
@@ -206,6 +206,7 @@ int inline loadUnalignData(float *data, size_t &offsetA, size_t &offsetB,
 	  unalignData[n] = *ptr;*/
 	for (int i = begin[selector]; i < end[selector]; ++i)
 		unalignData[n++] = data[i];
+	//std::cout << n << "--" << std::endl;
 	for (int i = begin[selector ^ 1]; i < end[selector ^ 1]; ++i)
 		unalignData[n++] = data[i];
 	int lenA = end[selector] - begin[selector];
@@ -232,18 +233,18 @@ int inline loadUnalignData(float *data, size_t &offsetA, size_t &offsetB,
 //If the trail of two lists is unalign because of median computation,
 //we need know where to "insert" the unalign data, to sort them correctly.
 //comparation is only done in one list, because the uValue comes from it and
-//must larger than all the previous keys. offset is the trail of the other
-//list, the return value is number of loops that must be done after unaligned
-//data loaded.
-int getTrailPosition(float *data, size_t bOffset, size_t eOffset, float uValue,
+//must larger than all the previous keys in same list. offset is the trail of
+//the other list, the return value is number of elements that must be loaded
+//after unaligned data loaded.
+size_t getTrailPosition(float *data, size_t bOffset, size_t eOffset, float uValue,
 					 int unitLen)
 {
-	int n = 0;
+	size_t n = 0;
 	size_t i = eOffset - unitLen;
 	while (i >= bOffset) {
 		if (data[i] > uValue)
 		{
-			++n;
+			n += unitLen;
 			i -= unitLen;
 		}
 		else
@@ -255,49 +256,49 @@ int getTrailPosition(float *data, size_t bOffset, size_t eOffset, float uValue,
 //only used by 16 to 32 merge loop, namely only two lists merge to one list.
 //must be used as a mediate process, rData must be copied a half, and must be
 //empty after this process complete.
-void simdMergeLoop2(__m128 *rData, float **dataOut, float **blocks,
-					float **blockBound, int lanes, int unitLen)
+inline void simdMergeLoop2(__m128 *rData, float **dataOut, float **blocks,
+						   float **blockBound, int lanes, int unitLen)
 {
-	size_t loop =
-		((blockBound[0] - blocks[0]) + (blockBound[1] -blocks[1])) / unitLen;
-	if ((blocks[0] != blockBound[0]) && (blocks[1] != blockBound[1]))
+	/*size_t loop =
+	  ((blockBound[0] - blocks[0]) + (blockBound[1] -blocks[1])) / unitLen;*/
+	if (blocks[0] != blockBound[0] && blocks[1] != blockBound[1])
 	{
 		int selector = (*(blockBound[0] - unitLen) > *(blockBound[1] - unitLen));
+		int xors = selector ^ 1;
 		/*float minBound = *(blockBound[selector] - unitLen);
-		std::cout << minBound << "--" << std::endl;*/
-		//float *test = blockBound[selector ^ 1] - unitLen;
-		/*while (test != blocks[selector ^ 1]) {
-			if (minBound > *test)
-				break;
-			else
-			{
-				test -= unitLen;
-				--loop;
-			}
-			}*/
+		  float *test = blockBound[selector ^ 1] - unitLen;
+		  while (test != blocks[selector ^ 1]) {
+		  if (minBound > *test)
+		  break;
+		  else
+		  {
+		  test -= unitLen;
+		  --loop;
+		  }
+		  }*/
 		//selected list have higher priority to load data to simd registers.
 		//for (size_t i = 0; i < loop; ++i)
 		while (blocks[selector] != blockBound[selector])
 		{
-			int temps = ((*(blocks[selector]) > *(blocks[selector ^ 1])) ^ selector);
-			loadData(blocks + temps, rData, lanes);
+			int temps = (*blocks[selector] > *blocks[xors]) ? xors : selector;
+			loadData(&blocks[temps], rData, lanes);
 			bitonicSort16232(rData);
 			storeData(dataOut, rData, lanes);
 		}
 	}
 	int selector = (blocks[0] == blockBound[0]);
-	for (float *ptr = blocks[selector]; ptr < blockBound[selector];
-		 ptr += unitLen)
+	while (blocks[selector] != blockBound[selector])
 	{
-		loadData(ptr, rData, lanes);
+		loadData(&blocks[selector], rData, lanes);
 		bitonicSort16232(rData);
 		storeData(dataOut, rData, lanes);
 	}
-	float *ptr = *dataOut;
+	/*float *ptr = *dataOut;
 	for (size_t i = 1; i < loop * unitLen; ++i)
 	{
-		if (*(ptr - i) < *(ptr -i - 1)) std::cout << "simd loop fail at " << i << std::endl;
+		if (*(ptr - i) < *(ptr -i - 1)) std::cout << "simd loop fail at " << i << " " << loop * unitLen << std::endl;
 	}
+	std::cout << (blocks[0] == blockBound[0]) << " " << (blocks[1] == blockBound[1]) << std::endl;*/
 }
 
 //merge two lists into one list. the two list both reside in dataIn, the
@@ -312,6 +313,7 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 	*output = dataOut;
 	if (!multipleOf(offsetA[0], unitLen))
 	{
+		//std::cout << "head unalign appear" << std::endl;
 		float *unalignStart = (float*)_mm_malloc(unitLen * sizeof(float), 16);
 		loadUnalignData(dataIn, offsetA[0], offsetB[0], unalignStart, unitLen,
 						true);
@@ -322,30 +324,31 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 	}
 	else
 	{
-		loadData(dataIn + offsetB[0], rData + halfArrayLen,
-				 halfArrayLen);
+		loadData(dataIn + offsetB[0], rData + halfArrayLen, halfArrayLen);
 		offsetB[0] += unitLen;
 	}
-	int tLoop = 0, selector; 
+	int tKeys = 0, selector; 
 	float *unalignEnd = NULL;
 	if (!multipleOf(offsetA[1], unitLen))
 	{
+		//std::cout << "trail unalign appear" << std::endl;
 		unalignEnd = (float*)_mm_malloc(unitLen * sizeof(float), 16);
 		selector = loadUnalignData(dataIn, offsetA[1], offsetB[1],
 									   unalignEnd, unitLen, false);
 		if (selector)
-			tLoop = getTrailPosition(dataIn, offsetA[0], offsetA[1],
+			tKeys = getTrailPosition(dataIn, offsetA[0], offsetA[1],
 									 unalignEnd[0], unitLen);
 		else
-			tLoop = getTrailPosition(dataIn, offsetB[0], offsetB[1],
+			tKeys = getTrailPosition(dataIn, offsetB[0], offsetB[1],
 			unalignEnd[0], unitLen);
+		//std::cout << "array unalignEnd loaded " << tKeys << std::endl;
 	}
 	//size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
-	//loop -= tLoop;
+	//loop -= tKeys;
 	float *blocks[2], *blockBound[2];
 	blocks[0] = dataIn + offsetA[0], blocks[1] = dataIn + offsetB[0];
 	blockBound[0] = dataIn + offsetA[1], blockBound[1] = dataIn + offsetB[1];
-	//blockBound[selector ^ 1] -= (tLoop * unitLen);
+	blockBound[selector ^ 1] -= tKeys;
 	/*for (size_t i = 0; i < loop; ++i)
 	{
 		loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
@@ -353,7 +356,7 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 		storeData(output, rData, halfArrayLen);
 		}*/
 	simdMergeLoop2(rData, output, blocks, blockBound, halfArrayLen, unitLen);
-	//blockBound[selector ^ 1] += (tLoop * unitLen);
+	blockBound[selector ^ 1] += tKeys;
 	//bool ua = false;
 	if (unalignEnd != NULL)
 	{
@@ -878,7 +881,7 @@ void mergeSortGeneral(DoubleBuffer<float> &data, size_t dataLen)
 void getMedian(float *data, size_t mergeLen, size_t chunkLen,
 			   size_t baseOffset, size_t &medianA, size_t &medianB)
 {
-	bool equalt = ((mergeLen % 65536) == 0);
+	//bool equalt = ((mergeLen % 65536) == 0);
 	//std::cout << mergeLen << " " << equalt << std::endl;
 	size_t startA = medianA, startB = medianB;
 	size_t minA, maxA;
@@ -933,7 +936,7 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 	size_t *medianA = new size_t[medianNum];
 	size_t *medianB = new size_t[medianNum];
 	//may read much fewer elements than sort, so can compute all medians.
-	//#pragma omp parallel for
+#pragma omp parallel for
 	for (int j = 0; j < medianNum; ++j)
 	{
 		//length can greater than the length of a chunk.
@@ -948,7 +951,7 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 	//for (int k = 0; k < medianNum; ++k)
 	//std::cout << medianA[k] << " " << medianB[k] << std::endl;
 	//std::cout << std::endl << std::endl;
-	//#pragma omp parallel for
+#pragma omp parallel for
 	for (int j = 0; j < blockNum; ++j)
 	{
 		size_t offsetA[2], offsetB[2];
@@ -977,6 +980,13 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 			offsetA[1] = medianA[baseIndex];
 			offsetB[1] = medianB[baseIndex];
 		}
+		//std::cout << offsetA[0] << " " << offsetA[1] << " " << offsetB[0] << " " << offsetB[1] << std::endl;
+		/*for (size_t k = offsetA[0]; k < offsetA[1] - 1; ++k)
+			if (dataIn[k] > dataIn[k + 1])
+				std::cout << "sort fail befor simd merge: " << k << " " << dataIn[k] << " " << dataIn[k + 1] << std::endl;
+		for (size_t k = offsetB[0]; k < offsetB[1] - 1; ++k)
+			if (dataIn[k] > dataIn[k + 1])
+			std::cout << "sort fail befor simd merge: " << k << " " << dataIn[k] << " " << dataIn[k + 1] << std::endl;*/
 		//mergeInRegisterUnalign(data, offsetA, offsetB, j * blockLen);
 		//std::cout << thdNumPerPair << " " << chunkLen << " " << baseOffset << " " << pairIndex << " " << offset << " " << j << " " << offsetB[1] + offsetA[1] - offsetA[0] - offsetB[0] << "---------" << std::endl;
 		simdMergeGeneral(dataIn, dataOut + j * blockLen, offsetA, offsetB);
@@ -1001,86 +1011,92 @@ void multiThreadMerge(DoubleBuffer<float> &data, size_t dataLen, int chunkNum,
 		// size_t *medianA = new size_t[medianNum];
 		// size_t *medianB = new size_t[medianNum];
 		//may read much fewer elements than sort, so can compute all medians.
-// #pragma omp parallel for
-// 		for (int j = 0; j < medianNum; ++j)
-// 		{
-			//length can greater than the length of a chunk.
-			// size_t length = (j % mdNumPerPair + 1) * blockLen;
-			// int pairIndex = j / mdNumPerPair;
-			// size_t baseOffset = pairIndex * chunkLen * 2;
-			//size_t startA, endA;
-			/*if (length > chunkLen)
-			{
-				startA = length - chunkLen;
-				endA = chunkLen;
-			}
-			else
-			{
-				startA = 0;
-				endA = length;
-			}*/
-			/*endA = std::min(length, chunkLen);
-			startA = length - std::min(length, chunkLen);
-			float *blockA = ptr + baseOffset, *blockB = blockA + chunkLen;
-			while (startA + 1 != endA)
-			{
-				//two pointers cannot be added directly, so we use offset here.
-				size_t median = (startA + endA) >> 1;
-				if (*(blockA + median) <= *(blockB + length - median))
-					startA = median;
-				else
-					endA = median;
-			}
-			size_t resultA =
-				(*(blockA+startA) <= *(blockB+length-endA))? endA : startA;
-			medianA[j] = baseOffset + resultA;
-			medianB[j] = baseOffset + chunkLen + length - resultA;*/
-			// size_t mA = 0, mB = 0;
-// 			getMedian(data, length, chunkLen, baseOffset, mA, mB);
-// 			medianA[j] = baseOffset + mA;
-// 			medianB[j] = baseOffset + chunkLen + mB;
-// 		}
-// #pragma omp parallel for
-// 		for (int j = 0; j < blockNum; ++j)
-// 		{
-// 			size_t offsetA[2], offsetB[2];
-// 			int pairIndex = j / thdNumPerPair;
-// 			int offset = j % thdNumPerPair;
-// 			int preThreadNum = pairIndex * mdNumPerPair;
-// 			size_t baseOffset = pairIndex * chunkLen * 2;
-// 			int baseIndex = preThreadNum + offset;
-// 			if (offset)
-// 			{
-// 				offsetA[0] = medianA[baseIndex - 1];
-// 				offsetB[0] = medianB[baseIndex - 1];
-// 			}
-// 			else
-// 			{
-// 				offsetA[0] = baseOffset;
-// 				offsetB[0] = baseOffset + chunkLen;
-// 			}
-// 			if (offset == (thdNumPerPair - 1))
-// 			{
-// 				offsetA[1] = baseOffset + chunkLen;
-// 				offsetB[1] = offsetA[1] + chunkLen;
-// 			}
-// 			else
-// 			{
-// 				offsetA[1] = medianA[baseIndex];
-// 				offsetB[1] = medianB[baseIndex];
-// 			}
-// 			mergeInRegisterUnalign(data, offsetA, offsetB, j * blockLen);
-// 		}
-// 		delete [] medianA;
-// 		delete [] medianB;
+		// #pragma omp parallel for
+		// 		for (int j = 0; j < medianNum; ++j)
+		// 		{
+		//length can greater than the length of a chunk.
+		// size_t length = (j % mdNumPerPair + 1) * blockLen;
+		// int pairIndex = j / mdNumPerPair;
+		// size_t baseOffset = pairIndex * chunkLen * 2;
+		//size_t startA, endA;
+		/*if (length > chunkLen)
+		  {
+		  startA = length - chunkLen;
+		  endA = chunkLen;
+		  }
+		  else
+		  {
+		  startA = 0;
+		  endA = length;
+		  }*/
+		/*endA = std::min(length, chunkLen);
+		  startA = length - std::min(length, chunkLen);
+		  float *blockA = ptr + baseOffset, *blockB = blockA + chunkLen;
+		  while (startA + 1 != endA)
+		  {
+		  //two pointers cannot be added directly, so we use offset here.
+		  size_t median = (startA + endA) >> 1;
+		  if (*(blockA + median) <= *(blockB + length - median))
+		  startA = median;
+		  else
+		  endA = median;
+		  }
+		  size_t resultA =
+		  (*(blockA+startA) <= *(blockB+length-endA))? endA : startA;
+		  medianA[j] = baseOffset + resultA;
+		  medianB[j] = baseOffset + chunkLen + length - resultA;*/
+		// size_t mA = 0, mB = 0;
+		// 			getMedian(data, length, chunkLen, baseOffset, mA, mB);
+		// 			medianA[j] = baseOffset + mA;
+		// 			medianB[j] = baseOffset + chunkLen + mB;
+		// 		}
+		// #pragma omp parallel for
+		// 		for (int j = 0; j < blockNum; ++j)
+		// 		{
+		// 			size_t offsetA[2], offsetB[2];
+		// 			int pairIndex = j / thdNumPerPair;
+		// 			int offset = j % thdNumPerPair;
+		// 			int preThreadNum = pairIndex * mdNumPerPair;
+		// 			size_t baseOffset = pairIndex * chunkLen * 2;
+		// 			int baseIndex = preThreadNum + offset;
+		// 			if (offset)
+		// 			{
+		// 				offsetA[0] = medianA[baseIndex - 1];
+		// 				offsetB[0] = medianB[baseIndex - 1];
+		// 			}
+		// 			else
+		// 			{
+		// 				offsetA[0] = baseOffset;
+		// 				offsetB[0] = baseOffset + chunkLen;
+		// 			}
+		// 			if (offset == (thdNumPerPair - 1))
+		// 			{
+		// 				offsetA[1] = baseOffset + chunkLen;
+		// 				offsetB[1] = offsetA[1] + chunkLen;
+		// 			}
+		// 			else
+		// 			{
+		// 				offsetA[1] = medianA[baseIndex];
+		// 				offsetB[1] = medianB[baseIndex];
+		// 			}
+		// 			mergeInRegisterUnalign(data, offsetA, offsetB, j * blockLen);
+		// 		}
+		// 		delete [] medianA;
+		// 		delete [] medianB;
 		multiThreadMergeGeneral(data.buffers[data.selector],
 								data.buffers[data.selector ^ 1], dataLen, i,
 								blockLen);
 		data.selector ^= 1;
-		/*for (size_t j = 0; j < dataLen; j += dataLen * 2 / i)
-			for (size_t k = j; k < j - 1 + dataLen * 2 / i; ++k)
-				if(*(data.Current() + k) > *(data.Current() + k + 1))
-				std::cout << "sort fail at " << i <<" " << k << std::endl;*/
+		/*for (size_t j = 0; j < dataLen; j += dataLen * 2 / i){
+			bool success = true;
+			for (size_t k = j; k < j - 1 + dataLen * 2 / i; ++k){
+				if(*(data.Current() + k) > *(data.Current() + k + 1)){
+					std::cout << "multiThreadMerge sort fail at " << i <<" " << k << std::endl;
+					success = false;
+				}
+			}
+			if (success) std::cout << "step in multiThreadMerge success" << std::endl;
+			}*/
 	}
 }
 

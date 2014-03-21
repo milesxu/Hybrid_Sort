@@ -343,11 +343,11 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 			unalignEnd[0], unitLen);
 		//std::cout << "array unalignEnd loaded " << tKeys << std::endl;
 	}
-	//size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
-	//loop -= tKeys;
 	float *blocks[2], *blockBound[2];
 	blocks[0] = dataIn + offsetA[0], blocks[1] = dataIn + offsetB[0];
 	blockBound[0] = dataIn + offsetA[1], blockBound[1] = dataIn + offsetB[1];
+	/*size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
+	  loop -= (tKeys / unitLen);*/
 	blockBound[selector ^ 1] -= tKeys;
 	/*for (size_t i = 0; i < loop; ++i)
 	{
@@ -366,9 +366,10 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 		bitonicSort16232(rData);
 		storeData(output, rData, halfArrayLen);
 		_mm_free(unalignEnd);
-		/*for (int i = 0; i < tLoop; ++i)
+		/*int tLoop = tKeys / unitLen;
+		for (int i = 0; i < tLoop; ++i)
 		{
-			ua = true;
+			//ua = true;
 			loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
 			bitonicSort16232(rData);
 			storeData(output, rData, halfArrayLen);

@@ -7,10 +7,10 @@
 #include <omp.h>
 #include <boost/timer/timer.hpp>
 #include <boost/format.hpp>
-#include <test/test_util.h>
 #include <cub/util_allocator.cuh>
 #include <cub/device/device_radix_sort.cuh>
-#include <cub/util_type.cuh>
+//#include <cub/util_type.cuh>
+#include <test/test_util.h>
 #include "util.h"
 #include "cpu_sort.h"
 
@@ -76,7 +76,7 @@ void mergeTest(size_t minLen, size_t maxLen, int seed);
 
 int main(int argc, char **argv)
 {
-	rsize_t dataLen = 1 << 28; //default length of sorted data
+	rsize_t dataLen = 1 << 27; //default length of sorted data
 	int seed = 1979090303;  //default seed for generate random data sequence
 	//std::cout << omp_get_max_threads() << std::endl;
 	CommandLineArgs args(argc, argv);
@@ -84,12 +84,12 @@ int main(int argc, char **argv)
 	args.GetCmdLineArgument("s", seed);
 	std::cout << dataLen << " " << seed << "\n";
 	args.DeviceInit();
+	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 	//mergeTest(1<<16, 1<<30, seed);
 	float *data = new float[dataLen];
 	GenerateData(seed, data, dataLen);
-	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 	gpu_sort_test(data, dataLen);
-	gpu_sort_serial(data, dataLen, dataLen);
+	//gpu_sort_serial(data, dataLen, dataLen);
 	delete [] data;
 	/*for (int dlf = 20; dlf < 26; ++dlf)
 	  {
@@ -196,7 +196,7 @@ void gpu_sort_serial(float *data, size_t dataLen, size_t blockLen)
 {
 	boost::timer::auto_cpu_timer t;
     cub::DoubleBuffer<float> d_keys;
-    cub::CachingDeviceAllocator cda;
+    cub::CachingDeviceAllocator cda(true);
     cda.DeviceAllocate((void**) &d_keys.d_buffers[0], sizeof(float) * dataLen);
     cda.DeviceAllocate((void**) &d_keys.d_buffers[1], sizeof(float) * dataLen);
     void *d_temp_storage = NULL;
@@ -209,14 +209,14 @@ void gpu_sort_serial(float *data, size_t dataLen, size_t blockLen)
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 	cudaEventRecord(start, 0);
-	//cudaMemcpyAsync(d_keys.d_buffers[d_keys.selector], data, sizeof(float) * dataLen, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_keys.d_buffers[d_keys.selector], data, sizeof(float) * dataLen, cudaMemcpyHostToDevice);
+	cudaMemcpyAsync(d_keys.d_buffers[d_keys.selector], data, sizeof(float) * dataLen, cudaMemcpyHostToDevice);
+	//cudaMemcpy(d_keys.d_buffers[d_keys.selector], data, sizeof(float) * dataLen, cudaMemcpyHostToDevice);
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&transfer_time, start, stop);
 	std::cout << "time used for host to device transfer: " << transfer_time << std::endl;
-	//cudaMemsetAsync(d_keys.d_buffers[d_keys.selector ^ 1], 0, sizeof(float) * dataLen);
-	cudaMemset(d_keys.d_buffers[d_keys.selector ^ 1], 0, sizeof(float) * dataLen);
+	cudaMemsetAsync(d_keys.d_buffers[d_keys.selector ^ 1], 0, sizeof(float) * dataLen);
+	//cudaMemset(d_keys.d_buffers[d_keys.selector ^ 1], 0, sizeof(float) * dataLen);
 	for (size_t offset = 0; offset < dataLen; offset += blockLen)
 	{
 		float stime;
@@ -232,8 +232,8 @@ void gpu_sort_serial(float *data, size_t dataLen, size_t blockLen)
 	std::cout << "average time used for block sort:" << sort_time * (blockLen * 1.0 / dataLen) << std::endl;
 	d_keys.selector ^= 1;
 	cudaEventRecord(start, 0);
-	//cudaMemcpyAsync(data, d_keys.Current(), sizeof(float) * dataLen, cudaMemcpyDeviceToHost);
-	cudaMemcpy(data, d_keys.Current(), sizeof(float) * dataLen, cudaMemcpyDeviceToHost);
+	cudaMemcpyAsync(data, d_keys.Current(), sizeof(float) * dataLen, cudaMemcpyDeviceToHost);
+	//cudaMemcpy(data, d_keys.Current(), sizeof(float) * dataLen, cudaMemcpyDeviceToHost);
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&transfer_time, start, stop);
@@ -260,7 +260,7 @@ void gpu_sort_test(float *data, rsize_t dataLen)
 		  << boost::format("%1%%|15t|") % "kernel time"
 		  << std::endl;
 	cub::DoubleBuffer<float> d_keys;
-    cub::CachingDeviceAllocator cda;
+    cub::CachingDeviceAllocator cda(true);
     cda.DeviceAllocate((void**)&d_keys.d_buffers[0], sizeof(float) * dataLen);
     cda.DeviceAllocate((void**)&d_keys.d_buffers[1], sizeof(float) * dataLen);
 	void *d_temp_storage = NULL;
@@ -275,16 +275,16 @@ void gpu_sort_test(float *data, rsize_t dataLen)
 	float *temp = new float[dataLen];
 	cudaMemcpy(temp, d_keys.Current(), sizeof(float) * dataLen,
 			   cudaMemcpyDeviceToHost);
+	cudaDeviceSynchronize();
 	resultTest(temp, dataLen);
+	std::cout << "warm up complete. " << temp[0] << " " << temp[dataLen - 1]
+			  << std::endl;
+	delete [] temp;
 	cda.DeviceFree(d_temp_storage);
 	cudaMemset(d_keys.d_buffers[0], 0, sizeof(float) * dataLen);
 	cudaMemset(d_keys.d_buffers[1], 0, sizeof(float) * dataLen);
-	cudaEvent_t start, stop;
-	cudaEventCreate(&start);
-	cudaEventCreateWithFlags(&stop, cudaEventBlockingSync);
 	d_keys.selector = 0;
 	int test_time = 50;
-	cudaDeviceSynchronize();
 	for (size_t chunk_size = 1 << 17; chunk_size <= dataLen; chunk_size *= 2)
 	{
 		std::cout << chunk_size << std::endl;
@@ -297,35 +297,38 @@ void gpu_sort_test(float *data, rsize_t dataLen)
 		size_t offset = 0;
 		for (int i = 0; i < test_time; ++i)
 		{
+			cudaEvent_t tStart, tStop, sStart, sStop;
+			cudaEventCreate(&tStart);
+			cudaEventCreate(&tStop);
+			cudaEventCreate(&sStart);
+			cudaEventCreate(&sStop);
 			if (offset == dataLen) {
 				offset = 0;
 				cudaMemset(d_keys.d_buffers[0], 0, sizeof(float) * dataLen);
 				cudaMemset(d_keys.d_buffers[1], 0, sizeof(float) * dataLen);
 			}
-			cudaEventRecord(start, 0);
+			cudaEventRecord(tStart, 0);
 			cudaMemcpyAsync(d_keys.d_buffers[0] + offset, data + offset,
 							sizeof(float) * chunk_size, cudaMemcpyHostToDevice, 0);
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
-			cudaDeviceSynchronize();
-			float ttime;
-			cudaEventElapsedTime(&ttime, start, stop);
-			transfer_time += ttime;
-			/*cub::DoubleBuffer<float> chunk(d_keys.d_buffers[0] + offset,
+			cudaEventRecord(tStop, 0);
+			cub::DoubleBuffer<float> chunk(d_keys.d_buffers[0] + offset,
 										   d_keys.d_buffers[1] + offset);
-			cudaEventRecord(start, 0);
+			cudaEventRecord(sStart, 0);
 			cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes,
 										   chunk, chunk_size);
-			cudaEventRecord(stop, 0);
-			cudaEventSynchronize(stop);
-			float ktime;
-			cudaEventElapsedTime(&ktime, start, stop);
-			kernel_time += ktime;
-			cudaMemcpy(temp + offset, chunk.Current(), sizeof(float) * chunk_size,
-			cudaMemcpyDeviceToHost);*/
-			offset += chunk_size;
-			kernel_time += 1.0;
+			cudaEventRecord(sStop, 0);
 			cudaDeviceSynchronize();
+			float ttime;
+			cudaEventElapsedTime(&ttime, tStart, tStop);
+			transfer_time += ttime;
+			float ktime;
+			cudaEventElapsedTime(&ktime, sStart, sStop);
+			kernel_time += ktime;
+			offset += chunk_size;
+			cudaEventDestroy(tStart);
+			cudaEventDestroy(tStop);
+			cudaEventDestroy(sStart);
+			cudaEventDestroy(sStop);
 		}
 		rFile << boost::format("%1%%|15t|") % chunk_size
 			  << boost::format("%1%%|15t|") % (transfer_time / test_time)
@@ -334,18 +337,12 @@ void gpu_sort_test(float *data, rsize_t dataLen)
 		cda.DeviceFree(d_temp_storage);
 	}
 	
-    /*cudaMemset(d_keys.d_buffers[d_keys.selector ^ 1], 0,
-	  sizeof(float) * dataLen);*/
     /*cudaMemcpy(data, d_keys.Current(), sizeof(float) * dataLen,
 	  cudaMemcpyDeviceToHost);*/
 	cda.DeviceFree(d_keys.d_buffers[0]);
 	cda.DeviceFree(d_keys.d_buffers[1]);
-	delete [] temp;
 	rFile << std::endl << std::endl;
 	rFile.close();
-	cudaEventDestroy(start);
-	cudaEventDestroy(stop);
-	cudaDeviceSynchronize();
 }
 
 float *cpu_sort_sse_parallel(DoubleBuffer<float> &data, rsize_t dataLen)

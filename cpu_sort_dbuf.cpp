@@ -568,11 +568,15 @@ void quantileInitial(DoubleBuffer<rsize_t> &quantile, const rsize_t *upperBound,
 	// 		++row;
 	// 	}
 	// }
-	if (initial) std::copy(bound.buffers[0], bound.buffers[0] + chunkNum,
+	size_t n = quantileLen;
+	if (initial)
+	{
+		std::copy(bound.buffers[0], bound.buffers[0] + chunkNum,
 						   quantile.buffers[1]);
+		//n = baseOffset;
+	}
 	int *remain = new int[chunkNum];
 	std::fill(remain, remain + chunkNum, 1);
-	size_t n = quantileLen;
 	do
 	{
 		size_t average = n / std::accumulate(remain, remain + chunkNum, 0);
@@ -604,10 +608,10 @@ void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
 					 rsize_t chunkNum, rsize_t quantileLen,
 					 bool initial = false)
 {
-	std::copy(quantile.Current(), quantile.Current() + chunkNum,
+	std::copy(quantile.buffers[0], quantile.buffers[0] + chunkNum,
 			  bound.buffers[0]);
 	quantileInitial(quantile, upperBound, bound, chunkNum,
-						quantileLen, initial);
+					quantileLen, initial);
 	while (true)
 	{
 		const float *lmax = NULL, *rmin = NULL;

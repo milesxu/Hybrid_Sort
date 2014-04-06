@@ -816,6 +816,126 @@ void multiWayMergeHybrid(DoubleBuffer<float> &data, size_t dataLen,
 	delete [] loopLBound;
 }
 
+void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
+						 size_t *upperBound, size_t chunkNum,
+						 size_t mergeStride, size_t startOffset,
+						 size_t endOffset)
+{
+	int unitLen = (rArrayLen >> 1) * simdLen;
+	size_t *quantileStart = new size_t[chunkNum];
+	size_t *quantileEnd = new size_t[chunkNum];
+	DoubleBuffer<size_t> quantile(quantileStart, quantileEnd);
+	size_t *loopUBound = new size_t[chunkNum];
+	size_t *loopLBound = new size_t[chunkNum];
+	DoubleBuffer<size_t> bound(loopLBound, loopUBound);
+	quantile.buffers[0][0] = 0;
+	std::copy(upperBound, upperBound + chunkNum - 1, quantile.buffers[0] + 1);
+	if (startOffset)
+	{
+		quantileCompute(data.Current(), quantile, bound, upperBound, chunkNum,
+						startOffset, true);
+		std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
+				  quantile.buffers[0]);
+	}
+	else
+	{
+		std::copy(quantile.buffers[0], quantile.buffers[0] + chunkNum,
+				  quantile.buffers[1]);
+	}
+	float *singleBuffer = (float*)_mm_malloc(mergeStride * sizeof(float), 16);
+	for (size_t i = startOffset; i < endOffset; i += mergeStride)
+	{
+		quantileCompute(data.Current(), quantile, bound, upperBound, chunkNum,
+						mergeStride);
+		//the number of unaligned elements cannot exceed the number below
+		size_t mostUnalign = (unitLen - 1) * chunkNum;
+		size_t uaArrayLen = mostUnalign - mostUnalign % unitLen;
+		float *unalignArray = (float*)_mm_malloc(uaArrayLen * sizeof(float), 16);
+		bool unaligned = false;
+		for (size_t i = 0; i < chunkNum; ++i)
+		{
+			size_t listLen = quantile.buffers[1][i] - quantile.buffers[0][i];
+			if (!multipleOf(listLen, unitLen))
+			{
+				unaligned = true;
+				break;
+			}
+		}
+		if (unaligned)
+		{
+			size_t n = 0;
+			for (size_t i = 0; i < chunkNum; ++i)
+			{
+				size_t listLen = quantile.buffers[1][i] - quantile.buffers[0][i];
+				if (!multipleOf(listLen, unitLen))
+				{
+					size_t aLen = listLen & ~(unitLen - 1);
+					size_t uLen = listLen - aLen;
+					std::copy(data.Current() + quantile.buffers[0][i] + aLen,
+							  data.Current() + quantile.buffers[1][i],
+							  unalignArray + n);
+					n += uLen;
+				}
+			}
+			float *testArray = new float[n];
+			std::copy(unalignArray, unalignArray + n, testArray);
+			std::sort(testArray, testArray + n);
+			for (size_t i = 1; i < n; ++i)
+			{
+				if (unalignArray[i] > unalignArray[i - 1])
+				{
+					continue;
+				}
+				else
+				{
+					size_t low = 0, high = i - 1, medium;
+					while (low != high)
+					{
+						medium = (low + high) / 2;
+						if (unalignArray[medium] > unalignArray[i])
+							--high;
+						else
+							++low;
+					}
+					if (unalignArray[i] > unalignArray[low])
+						++low;
+					float temp = unalignArray[i];
+					//In std::copy function, pointers or iterators cannot
+					//overlap, in this case must use copy_backward.
+					//there is no exception be showed, but result may not
+					//be correct.
+					std::copy_backward(unalignArray + low, unalignArray + i,
+									   unalignArray + i + 1);
+					unalignArray[low] = temp;
+				}
+			}
+			for (size_t i = 0; i < n; ++i)
+				if (unalignArray[i] != testArray[i])
+				{
+					std::cout << "insert binary sort failed. " << i << std::endl;
+					break;
+				}
+			delete [] testArray;
+		}
+		DoubleBuffer<float> block(singleBuffer,
+								  data.buffers[data.selector ^ 1] + i);
+		int selector = getMergeStartBuffer(chunkNum, 1);
+		for (size_t i = chunkNum; i > 1; i >>= 1)
+		{
+			float **start = new float*[i];
+			float **end = new float*[i];
+			float *ptrIn = block.buffers[selector];
+			for (size_t j = 0; j < i; j += 2)
+		}
+		_mm_free(unalignArray);
+	}
+	_mm_free(singleBuffer);
+	delete [] quantileStart;
+	delete [] quantileEnd;
+	delete [] loopLBound;
+	delete [] loopUBound;
+}
+
 void mergeSort(DoubleBuffer<float> &data, rsize_t dataLen)
 {
 	for (rsize_t offset = 0; offset < dataLen; offset += blockUnitLen)
@@ -855,6 +975,14 @@ void updateSelectorGeneral(int &selector, size_t startLen, size_t dataLen)
 size_t lastPower2(size_t a)
 {
 	return 1 << (64 - _lzcnt_u64(a) - 1);
+}
+
+int getMergeStartBuffer(size_t chunkNum, int endBuffer)
+{
+	//what if chunknum is not power of 2?
+	if (_tzcnt_u64(chunkNum) & 1)
+		return endBuffer ^ 1;
+	return endBuffer;
 }
 
 void mergeSortGeneral(DoubleBuffer<float> &data, size_t dataLen)

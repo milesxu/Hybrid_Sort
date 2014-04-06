@@ -46,6 +46,8 @@ struct hybridDispatchParams3
 	size_t gpuChunkLen;
 	size_t cpuChunkLen;
 	size_t cpuBlockLen;
+	size_t gpuPart;
+	size_t cpuPart;
 	int threads;
 	/*size_t multiwayBlockSize;
 	  size_t gpuMergeLen;
@@ -54,12 +56,52 @@ struct hybridDispatchParams3
 	//now, dataLen must be power of 2.
 	hybridDispatchParams3(size_t dataLen)
 	{
-		//TODO: when GPU global memory fewer than the half of dataLen?
-		gpuChunkLen = dataLen >> 1;
 		threads = omp_get_max_threads();
-		size_t cache3Byte = cacheSizeInByte3() / (2 * sizeof(T));
-		cpuChunkLen = std::min(gpuChunkLen, lastPower2(cache3Byte));
-		//gpuChunkLen = dataLen > cpuChunkLen? cpuChunkLen : 0;
+		size_t baseChunkLen = lastPower2(cacheSizeInByte3() / (2 * sizeof(T)));
+		//TODO: when GPU global memory fewer than the half of dataLen?
+		//TODO: other way to cut data lists to more fit in capacity of GPU
+		//TODO: to find a more portable solution
+		if (dataLen < baseChunkLen)
+		{
+			gpuChunkLen = 0;
+			gpuPart = 0;
+		}
+		else if (dataLen < 1 << 26)
+		{
+			gpuChunkLen = dataLen >> 1;
+			gpuPart = dataLen >> 1;
+		}
+		else if (dataLen < 1 << 28)
+		{
+			gpuChunkLen = (dataLen >> 2) * 3;
+			gpuPart = gpuChunkLen;
+		}
+		else if (dataLen == 1 << 28)
+		{
+			gpuChunkLen = dataLen >> 2;
+			gpuPart = gpuChunkLen * 3;
+		}
+		else
+		{
+			gpuChunkLen = 1 << 27;
+			gpuPart = (dataLen >> 2) * 3;
+		}
+		/*gpuChunkLen =
+		  dataLen < baseChunkLen ? 0 : std::min(dataLen >> 1, 1 << 27);*/
+		cpuChunkLen =
+			gpuChunkLen > 0 ? std::min(gpuChunkLen, baseChunkLen) : dataLen;
+		cpuPart = dataLen - gpuPart;
+		cpuBlockLen = cpuChunkLen / threads;
+	}
+	
+	hybridDispatchParams3(size_t dataLen, size_t gpuPartLen)
+	{
+		threads = omp_get_max_threads();
+		size_t baseChunkLen = lastPower2(cacheSizeInByte3() / (2 * sizeof(T)));
+		gpuPart = gpuPartLen;
+		gpuChunkLen = std::min(gpuPart, size_t(1 << 27));
+		cpuPart = dataLen - gpuPart;
+		cpuChunkLen = std::min(baseChunkLen, cpuPart);
 		cpuBlockLen = cpuChunkLen / threads;
 	}
 };
@@ -73,6 +115,7 @@ void hybrid_sort(float *data, size_t dataLen);
 void hybrid_sort3(float *data, size_t dataLen, double (&results)[2]);
 void mergeTest(size_t minLen, size_t maxLen, int seed);
 void multiWayTest(size_t minLen, size_t maxLen, int seed);
+void multiWayTestMedian(size_t maxLen, int seed);
 
 int main(int argc, char **argv)
 {
@@ -86,7 +129,8 @@ int main(int argc, char **argv)
 	args.DeviceInit();
 	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 	//mergeTest(1<<16, 1<<30, seed);
-	multiWayTest(1<<16, 1<<28, seed);
+	//multiWayTest(1<<16, 1<<28, seed);
+	multiWayTestMedian(1<<19, seed);
 	/*float *data = new float[dataLen];
 	  GenerateData(seed, data, dataLen);
 	  gpu_sort_test(data, dataLen);*/
@@ -785,4 +829,95 @@ void multiWayTest(size_t minLen, size_t maxLen, int seed)
 	}
 	_mm_free(hdata.buffers[0]);
 	_mm_free(hdata.buffers[1]);
+}
+
+
+/*void hybrid_sort31(float *data, size_t dataLen, double (&results)[2])
+{
+	float* dataIn = (float*)_mm_malloc(dataLen * sizeof(float), 16);
+	float* dataOut= (float*)_mm_malloc(dataLen * sizeof(float), 16);
+	std::copy(data, data + dataLen, dataIn);
+	DoubleBuffer<float> hdata(dataIn, dataOut);
+	
+	hybridDispatchParams3<float> params(dataLen);
+#pragma omp parallel 
+	{
+		omp_set_nested(1);
+#pragma omp sections
+		{
+#pragma omp section
+			{
+				if (params.gpuPart)
+				{
+				}
+			}
+#pragma omp section
+			{
+#pragma omp parallel for
+			}
+		}
+	}
+	
+#pragma omp parallel 
+	{
+		omp_set_nested(1);
+#pragma omp sections
+		{
+#pragma omp section
+			{
+			}
+#pragma omp section
+			{
+#pragma omp parallel for
+			}
+		}
+	}
+	}*/
+
+void hybrid_sort_test(size_t minLen, size_t maxLen, int seed)
+{
+	float *data = new float[maxLen];
+	GenerateData(seed, data, maxLen);
+	float* dataIn = (float*)_mm_malloc(maxLen * sizeof(float), 16);
+	float* dataOut= (float*)_mm_malloc(maxLen * sizeof(float), 16);
+	std::copy(data, data + maxLen, dataIn);
+	DoubleBuffer<float> hdata(dataIn, dataOut);
+	
+	hybridDispatchParams3<float> params(maxLen);
+	chunkMerge(hdata, maxLen, params);
+}
+
+void multiWayTestMedian(size_t maxLen, int seed)
+{
+	float *data = new float[maxLen];
+	GenerateData(seed, data, maxLen);
+	float* dataIn = (float*)_mm_malloc(maxLen * sizeof(float), 16);
+	float* dataOut= (float*)_mm_malloc(maxLen * sizeof(float), 16);
+	std::copy(data, data + maxLen, dataIn);
+	DoubleBuffer<float> hdata(dataIn, dataOut);
+	
+	hybridDispatchParams3<float> params(maxLen, 0);
+	size_t dataLen = maxLen;
+	for (size_t i = 0; i < dataLen; i += params.cpuChunkLen)
+	{
+#pragma omp parallel for
+		for (size_t j = i; j < i + params.cpuChunkLen; j += params.cpuBlockLen)
+		{
+			DoubleBuffer<float> block(hdata.buffers[hdata.selector] + j,
+									  hdata.buffers[hdata.selector ^ 1] + j);
+			singleThreadMerge(block, params.cpuBlockLen);
+		}
+		DoubleBuffer<float> chunk(hdata.buffers[hdata.selector] + i,
+								  hdata.buffers[hdata.selector ^ 1] + i);
+		updateSelectorGeneral(chunk.selector, 8, params.cpuBlockLen);
+		size_t *upperBound = new size_t[params.threads];
+		std::fill(upperBound, upperBound + params.threads, params.cpuBlockLen);
+		std::partial_sum(upperBound, upperBound + params.threads, upperBound);
+		multiWayMergeMedian(chunk, dataLen, upperBound, params.threads,
+							params.cpuBlockLen, i, i + params.cpuChunkLen);
+		delete [] upperBound;
+	}
+	_mm_free(dataIn);
+	_mm_free(dataOut);
+	delete [] data;
 }

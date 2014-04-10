@@ -62,6 +62,12 @@ void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
 						 size_t *upperBound, size_t chunkNum,
 						 size_t mergeStride, size_t startOffset,
 						 size_t endOffset);
+void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
+						 size_t *upperBound, size_t chunkNum, float *tempBuffer,
+						 size_t mergeStride, size_t startOffset,
+						 size_t uaArrayLen);
+void multiWayMergeMedianParallel(DoubleBuffer<float> &data, size_t dataLen,
+								 size_t blockLen, size_t chunkLen);
 
 #endif /* CPU_SORT_H_ */
 

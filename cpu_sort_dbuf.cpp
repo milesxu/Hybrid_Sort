@@ -8,6 +8,43 @@
 #include "cpu_sort.h"
 #include "sse_sort.h"
 
+
+int getMergeStartBuffer(size_t chunkNum, int endBuffer);
+
+//insert sort, and search process use binary search.
+void insertBinarySort(float *data, size_t dataLen)
+{
+	for (size_t j = 1; j < dataLen; ++j)
+	{
+		if (data[j] > data[j - 1])
+		{
+			continue;
+		}
+		else
+		{
+			size_t low = 0, high = j - 1, medium;
+			while (low != high)
+			{
+				medium = (low + high) / 2;
+				if (data[medium] > data[j])
+					--high;
+				else
+					++low;
+			}
+			if (data[j] > data[low])
+				++low;
+			float temp = data[j];
+			//In std::copy function, pointers or iterators cannot
+			//overlap, in this case must use copy_backward.
+			//there is no exception be showed, but result may not
+			//be correct.
+			std::copy_backward(data + low, data + j, data + j + 1);
+			data[low] = temp;
+		}
+	}
+	
+}
+
 void mergeInRegister(DoubleBuffer<float> &data, size_t dataLen)
 {
 	const size_t halfDataLen = dataLen >> 1;
@@ -255,7 +292,7 @@ size_t getTrailPosition(float *data, size_t bOffset, size_t eOffset, float uValu
 
 //only used by 16 to 32 merge loop, namely only two lists merge to one list.
 //must be used as a mediate process, rData must be copied a half, and must be
-//empty after this process complete.
+//emplified after this process complete.
 inline void simdMergeLoop2(__m128 *rData, float **dataOut, float **blocks,
 						   float **blockBound, int lanes, int unitLen)
 {
@@ -303,6 +340,7 @@ inline void simdMergeLoop2(__m128 *rData, float **dataOut, float **blocks,
 
 //merge two lists into one list. the two list both reside in dataIn, the
 //elements that will be merged is bounded by offset arrays.
+//TODO: rename to simdMergeUnalign
 void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 					  size_t offsetB[2]) //bool stream = false)
 {
@@ -377,12 +415,26 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 		simdMergeLoop2(rData, output, blocks, blockBound, halfArrayLen, unitLen);
 	}
 	storeData(output, rData + halfArrayLen, halfArrayLen);
+	delete output;
 	/*size_t length = offsetA[1] + offsetB[1] - offsetA[0] - offsetB[0];
 	  std::cout << length << std::endl;*/
 	/*for (size_t i = 0; i < 65535; ++i)
 		if (dataOut[i] > dataOut[i + 1])
 		std::cout << "simd sort fail at: " << i << " " << ua << " " << tLoop << " " << (*output - dataOut) << " " << dataOut[i] - dataOut[i + 1] << std::endl;*/
 	//if (tLoop) std::cout << tLoop << std::endl;
+}
+
+void simdMergeAlign(float *dataOut, float **start, float **end)
+{
+	int unitLen = (rArrayLen >> 1) * simdLen;
+	int halfArrayLen = rArrayLen >> 1;
+	__m128 rData[rArrayLen];
+	float **output = new float*;
+	*output = dataOut;
+	loadData(&start[1], rData + halfArrayLen, halfArrayLen);
+	simdMergeLoop2(rData, output, start, end, halfArrayLen, unitLen);
+	storeData(output, rData + halfArrayLen, halfArrayLen);
+	delete output;
 }
 
 void mergeInRegisterUnalignBuffer(DoubleBuffer<float> &data,
@@ -851,89 +903,212 @@ void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
 		size_t mostUnalign = (unitLen - 1) * chunkNum;
 		size_t uaArrayLen = mostUnalign - mostUnalign % unitLen;
 		float *unalignArray = (float*)_mm_malloc(uaArrayLen * sizeof(float), 16);
-		bool unaligned = false;
-		for (size_t i = 0; i < chunkNum; ++i)
+		float **start = new float*[chunkNum];
+		float **end = new float*[chunkNum];
+		int factornot = ~(unitLen - 1);
+		size_t n = 0;
+		for (size_t j = 0; j < chunkNum; ++j)
 		{
-			size_t listLen = quantile.buffers[1][i] - quantile.buffers[0][i];
-			if (!multipleOf(listLen, unitLen))
+			size_t listLen = quantile.buffers[1][j] - quantile.buffers[0][j];
+			size_t uLen = listLen & factornot;
+			size_t aLen = listLen - uLen;
+			if (aLen)
 			{
-				unaligned = true;
-				break;
+				std::copy(data.Current() + quantile.buffers[0][j] + uLen,
+						  data.Current() + quantile.buffers[1][j],
+						  unalignArray + n);
+				n += aLen;
 			}
+			start[j] = data.Current() + quantile.buffers[0][j];
+			end[j] = data.Current() + quantile.buffers[0][j] + uLen;
 		}
-		if (unaligned)
-		{
-			size_t n = 0;
-			for (size_t i = 0; i < chunkNum; ++i)
-			{
-				size_t listLen = quantile.buffers[1][i] - quantile.buffers[0][i];
-				if (!multipleOf(listLen, unitLen))
-				{
-					size_t aLen = listLen & ~(unitLen - 1);
-					size_t uLen = listLen - aLen;
-					std::copy(data.Current() + quantile.buffers[0][i] + aLen,
-							  data.Current() + quantile.buffers[1][i],
-							  unalignArray + n);
-					n += uLen;
-				}
-			}
-			float *testArray = new float[n];
-			std::copy(unalignArray, unalignArray + n, testArray);
-			std::sort(testArray, testArray + n);
-			for (size_t i = 1; i < n; ++i)
-			{
-				if (unalignArray[i] > unalignArray[i - 1])
-				{
-					continue;
-				}
-				else
-				{
-					size_t low = 0, high = i - 1, medium;
-					while (low != high)
-					{
-						medium = (low + high) / 2;
-						if (unalignArray[medium] > unalignArray[i])
-							--high;
-						else
-							++low;
-					}
-					if (unalignArray[i] > unalignArray[low])
-						++low;
-					float temp = unalignArray[i];
-					//In std::copy function, pointers or iterators cannot
-					//overlap, in this case must use copy_backward.
-					//there is no exception be showed, but result may not
-					//be correct.
-					std::copy_backward(unalignArray + low, unalignArray + i,
-									   unalignArray + i + 1);
-					unalignArray[low] = temp;
-				}
-			}
-			for (size_t i = 0; i < n; ++i)
-				if (unalignArray[i] != testArray[i])
-				{
-					std::cout << "insert binary sort failed. " << i << std::endl;
-					break;
-				}
-			delete [] testArray;
-		}
+		std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
+				  quantile.buffers[0]);
+		if (n)
+			std::sort(unalignArray, unalignArray + n);
 		DoubleBuffer<float> block(singleBuffer,
 								  data.buffers[data.selector ^ 1] + i);
 		int selector = getMergeStartBuffer(chunkNum, 1);
-		for (size_t i = chunkNum; i > 1; i >>= 1)
+		float *ptrIn = block.buffers[selector];
+		for (size_t j = 0; j < chunkNum; j += 2)
 		{
-			float **start = new float*[i];
-			float **end = new float*[i];
-			float *ptrIn = block.buffers[selector];
-			for (size_t j = 0; j < i; j += 2)
+			for (int k = 0; k < 2; ++k)
+			{
+				float *temp = ptrIn;
+				std::copy(start[j + k], end[j + k], ptrIn);
+				ptrIn += (end[j + k] - start[j + k]);
+				if (n && (unalignArray[0] > *(ptrIn - 1)))
+				{
+					std::copy(unalignArray, unalignArray + n, ptrIn);
+					ptrIn += n;
+					n = 0;
+				}
+				start[j + k] = temp;
+				end[j + k] = ptrIn;
+			}
+			size_t startOffset = start[j] - block.buffers[selector];
+			size_t endOffset = end[j + 1] - block.buffers[selector];
+			simdMergeAlign(block.buffers[selector ^ 1] + startOffset,
+						   &start[j], &end[j]);
+			start[j / 2] = block.buffers[selector ^ 1] + startOffset;
+			end[j / 2] = block.buffers[selector ^ 1] + endOffset;
 		}
 		_mm_free(unalignArray);
+		for (size_t j = chunkNum >> 1; j > 1; j >>= 1)
+		{
+			selector ^= 1;
+			for (size_t k = 0; k < j; k += 2)
+			{
+				size_t startOffset = start[k] - block.buffers[selector];
+				size_t endOffset = end[k + 1] - block.buffers[selector];
+				simdMergeAlign(block.buffers[selector ^ 1] + startOffset,
+							   &start[k], &end[k]);
+				start[k / 2] = block.buffers[selector ^ 1] + startOffset;
+				end[k / 2] = block.buffers[selector ^ 1] + endOffset;
+			}
+		}
+		delete [] start;
+		delete [] end;
 	}
+	data.selector ^= 1;
 	_mm_free(singleBuffer);
 	delete [] quantileStart;
 	delete [] quantileEnd;
 	delete [] loopLBound;
 	delete [] loopUBound;
+}
+
+inline void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
+								size_t *upperBound, size_t chunkNum,
+								float *tempBuffer,
+								DoubleBuffer<size_t> &quantile,
+								DoubleBuffer<size_t> &bound, size_t mergeStride,
+								size_t startOffset, float *unalignArray,
+								size_t uaArrayLen, int factornot, float **start,
+								float **end)
+{
+	if (startOffset)
+	{
+		quantileCompute(data.Current(), quantile, bound, upperBound, chunkNum,
+						startOffset, true);
+		std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
+				  quantile.buffers[0]);
+	}
+	else
+	{
+		std::copy(quantile.buffers[0], quantile.buffers[0] + chunkNum,
+				  quantile.buffers[1]);
+	}
+	quantileCompute(data.Current(), quantile, bound, upperBound, chunkNum,
+					mergeStride);
+	//the number of unaligned elements cannot exceed the number below
+	size_t n = 0;
+	for (size_t j = 0; j < chunkNum; ++j)
+	{
+		size_t listLen = quantile.buffers[1][j] - quantile.buffers[0][j];
+		size_t uLen = listLen & factornot;
+		size_t aLen = listLen - uLen;
+		if (aLen)
+		{
+			std::copy(data.Current() + quantile.buffers[0][j] + uLen,
+					  data.Current() + quantile.buffers[1][j],
+					  unalignArray + n);
+			n += aLen;
+		}
+		start[j] = data.Current() + quantile.buffers[0][j];
+		end[j] = data.Current() + quantile.buffers[0][j] + uLen;
+	}
+	/*std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
+	  quantile.buffers[0]);*/
+	if (n) std::sort(unalignArray, unalignArray + n);
+	DoubleBuffer<float> block(tempBuffer,
+							  data.buffers[data.selector ^ 1] + startOffset);
+	int selector = getMergeStartBuffer(chunkNum, 1);
+	float *ptrIn = block.buffers[selector];
+	for (size_t j = 0; j < chunkNum; j += 2)
+	{
+		for (int k = 0; k < 2; ++k)
+		{
+			float *temp = ptrIn;
+			std::copy(start[j + k], end[j + k], ptrIn);
+			ptrIn += (end[j + k] - start[j + k]);
+			if (n && (unalignArray[0] > *(ptrIn - 1)))
+			{
+				std::copy(unalignArray, unalignArray + n, ptrIn);
+				ptrIn += n;
+				n = 0;
+			}
+			start[j + k] = temp;
+			end[j + k] = ptrIn;
+		}
+		size_t startOffset = start[j] - block.buffers[selector];
+		size_t endOffset = end[j + 1] - block.buffers[selector];
+		simdMergeAlign(block.buffers[selector ^ 1] + startOffset,
+					   &start[j], &end[j]);
+		start[j / 2] = block.buffers[selector ^ 1] + startOffset;
+		end[j / 2] = block.buffers[selector ^ 1] + endOffset;
+	}
+	for (size_t j = chunkNum >> 1; j > 1; j >>= 1)
+	{
+		selector ^= 1;
+		for (size_t k = 0; k < j; k += 2)
+		{
+			size_t startOffset = start[k] - block.buffers[selector];
+			size_t endOffset = end[k + 1] - block.buffers[selector];
+			simdMergeAlign(block.buffers[selector ^ 1] + startOffset,
+						   &start[k], &end[k]);
+			start[k / 2] = block.buffers[selector ^ 1] + startOffset;
+			end[k / 2] = block.buffers[selector ^ 1] + endOffset;
+		}
+	}
+}
+
+void multiWayMergeMedianParallel(DoubleBuffer<float> &data, size_t dataLen,
+								 size_t blockLen, size_t chunkLen)
+{
+	size_t chunkNum = dataLen / chunkLen;
+	size_t *upperBound = new size_t[chunkNum];
+	std::fill(upperBound, upperBound + chunkNum, chunkLen);
+	std::partial_sum(upperBound, upperBound + chunkNum, upperBound);
+	float *mwBuffer =
+		(float*)_mm_malloc(blockLen * omp_get_max_threads() *sizeof(float), 16);
+	int unitLen = (rArrayLen >> 1) * simdLen;
+	int factornot = ~(unitLen - 1);
+	size_t mostUnalign = (unitLen - 1) * chunkNum;
+	size_t uaArrayLen = mostUnalign - mostUnalign % unitLen;
+#pragma omp parallel
+	{
+		size_t *quantileStart = new size_t[chunkNum];
+		size_t *quantileEnd = new size_t[chunkNum];
+		DoubleBuffer<size_t> quantile(quantileStart, quantileEnd);
+		quantile.buffers[0][0] = 0;
+		std::copy(upperBound, upperBound + chunkNum - 1,
+				  quantile.buffers[0] + 1);
+		size_t *loopUBound = new size_t[chunkNum];
+		size_t *loopLBound = new size_t[chunkNum];
+		DoubleBuffer<size_t> bound(loopLBound, loopUBound);
+		float *unalignArray = (float*)_mm_malloc(uaArrayLen * sizeof(float), 16);
+		size_t offset = omp_get_thread_num() * blockLen;
+		float **start = new float*[chunkNum];
+		float **end = new float*[chunkNum];
+		for (size_t i = offset; i < dataLen; i += omp_get_max_threads() * blockLen)
+		{
+			multiWayMergeMedian(data, dataLen, upperBound, chunkNum,
+								mwBuffer + offset, quantile, bound, blockLen,
+								i, unalignArray, uaArrayLen, factornot,
+								start, end);
+		}
+		_mm_free(unalignArray);
+		delete [] start;
+		delete [] end;
+		delete [] quantileStart;
+		delete [] quantileEnd;
+		delete [] loopLBound;
+		delete [] loopUBound;
+	}
+	data.selector ^= 1;
+	delete [] upperBound;
+	_mm_free(mwBuffer);
 }
 
 void mergeSort(DoubleBuffer<float> &data, rsize_t dataLen)

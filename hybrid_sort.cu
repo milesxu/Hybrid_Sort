@@ -115,7 +115,7 @@ void hybrid_sort(float *data, size_t dataLen);
 void hybrid_sort3(float *data, size_t dataLen, double (&results)[2]);
 void mergeTest(size_t minLen, size_t maxLen, int seed);
 void multiWayTest(size_t minLen, size_t maxLen, int seed);
-void multiWayTestMedian(size_t maxLen, int seed);
+void multiWayTestMedian(size_t minLen, size_t maxLen, int seed);
 
 int main(int argc, char **argv)
 {
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
 	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 	//mergeTest(1<<16, 1<<30, seed);
 	//multiWayTest(1<<16, 1<<28, seed);
-	multiWayTestMedian(1<<19, seed);
+	multiWayTestMedian(1<<16, 1<<19, seed);
 	/*float *data = new float[dataLen];
 	  GenerateData(seed, data, dataLen);
 	  gpu_sort_test(data, dataLen);*/
@@ -833,46 +833,46 @@ void multiWayTest(size_t minLen, size_t maxLen, int seed)
 
 
 /*void hybrid_sort31(float *data, size_t dataLen, double (&results)[2])
-{
-	float* dataIn = (float*)_mm_malloc(dataLen * sizeof(float), 16);
-	float* dataOut= (float*)_mm_malloc(dataLen * sizeof(float), 16);
-	std::copy(data, data + dataLen, dataIn);
-	DoubleBuffer<float> hdata(dataIn, dataOut);
+  {
+  float* dataIn = (float*)_mm_malloc(dataLen * sizeof(float), 16);
+  float* dataOut= (float*)_mm_malloc(dataLen * sizeof(float), 16);
+  std::copy(data, data + dataLen, dataIn);
+  DoubleBuffer<float> hdata(dataIn, dataOut);
+  
+  hybridDispatchParams3<float> params(dataLen);
+  #pragma omp parallel 
+  {
+  omp_set_nested(1);
+  #pragma omp sections
+  {
+  #pragma omp section
+  {
+  if (params.gpuPart)
+  {
+  }
+  }
+  #pragma omp section
+  {
+  #pragma omp parallel for
+  }
+  }
+  }
 	
-	hybridDispatchParams3<float> params(dataLen);
-#pragma omp parallel 
-	{
-		omp_set_nested(1);
-#pragma omp sections
-		{
-#pragma omp section
-			{
-				if (params.gpuPart)
-				{
-				}
-			}
-#pragma omp section
-			{
-#pragma omp parallel for
-			}
-		}
-	}
-	
-#pragma omp parallel 
-	{
-		omp_set_nested(1);
-#pragma omp sections
-		{
-#pragma omp section
-			{
-			}
-#pragma omp section
-			{
-#pragma omp parallel for
-			}
-		}
-	}
-	}*/
+  #pragma omp parallel 
+  {
+  omp_set_nested(1);
+  #pragma omp sections
+  {
+  #pragma omp section
+  {
+  }
+  #pragma omp section
+  {
+  #pragma omp parallel for
+  }
+  }
+  }
+  }*/
 
 void hybrid_sort_test(size_t minLen, size_t maxLen, int seed)
 {
@@ -887,7 +887,7 @@ void hybrid_sort_test(size_t minLen, size_t maxLen, int seed)
 	chunkMerge(hdata, maxLen, params);
 }
 
-void multiWayTestMedian(size_t maxLen, int seed)
+void multiWayTestMedian(size_t minLen, size_t maxLen, int seed)
 {
 	float *data = new float[maxLen];
 	GenerateData(seed, data, maxLen);
@@ -897,8 +897,7 @@ void multiWayTestMedian(size_t maxLen, int seed)
 	DoubleBuffer<float> hdata(dataIn, dataOut);
 	
 	hybridDispatchParams3<float> params(maxLen, 0);
-	size_t dataLen = maxLen;
-	for (size_t i = 0; i < dataLen; i += params.cpuChunkLen)
+	for (size_t i = 0; i < maxLen; i += params.cpuChunkLen)
 	{
 #pragma omp parallel for
 		for (size_t j = i; j < i + params.cpuChunkLen; j += params.cpuBlockLen)
@@ -907,17 +906,57 @@ void multiWayTestMedian(size_t maxLen, int seed)
 									  hdata.buffers[hdata.selector ^ 1] + j);
 			singleThreadMerge(block, params.cpuBlockLen);
 		}
-		DoubleBuffer<float> chunk(hdata.buffers[hdata.selector] + i,
-								  hdata.buffers[hdata.selector ^ 1] + i);
-		updateSelectorGeneral(chunk.selector, 8, params.cpuBlockLen);
-		size_t *upperBound = new size_t[params.threads];
-		std::fill(upperBound, upperBound + params.threads, params.cpuBlockLen);
-		std::partial_sum(upperBound, upperBound + params.threads, upperBound);
-		multiWayMergeMedian(chunk, dataLen, upperBound, params.threads,
-							params.cpuBlockLen, i, i + params.cpuChunkLen);
-		delete [] upperBound;
+	}
+	/*DoubleBuffer<float> chunk(hdata.buffers[hdata.selector] + i,
+	  hdata.buffers[hdata.selector ^ 1] + i);
+	  updateSelectorGeneral(chunk.selector, 8, params.cpuBlockLen);*/
+	updateSelectorGeneral(hdata.selector, 8, params.cpuBlockLen);
+	multiWayMergeMedianParallel(hdata, maxLen, params.cpuBlockLen,
+								params.cpuBlockLen);
+	resultTest(hdata.Current(), maxLen);
+	
+	std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
+						std::ios::app);
+	if (rFile.is_open()) 
+		rFile << boost::format("%1%%|15t|") % "data length"
+			  << boost::format("%1%%|15t|") % "single merge"
+			  << boost::format("%1%%|15t|") % "multiway merge"
+			  << std::endl;
+	for (size_t dataLen = minLen; dataLen <= maxLen; dataLen <<= 1)
+	{
+		int test_time = 50;
+		size_t bLen = dataLen / omp_get_max_threads();
+		double smerge = 0.0, mmerge = 0.0;
+		for (int i = 0; i < test_time; ++i)
+		{
+			std::copy(data, data + dataLen, dataIn);
+			std::fill(dataOut, dataOut + dataLen, 0);
+			hdata.selector = 0;
+			double start, end;
+			start = omp_get_wtime();
+#pragma omp parallel for
+			for (size_t j = 0; j < dataLen; j += bLen)
+			{
+				DoubleBuffer<float> block(hdata.buffers[hdata.selector] + j,
+										  hdata.buffers[hdata.selector ^ 1] + j);
+				singleThreadMerge(block, bLen);
+			}
+			end = omp_get_wtime();
+			smerge += (end - start);
+			updateSelectorGeneral(hdata.selector, 8, bLen);
+			start = omp_get_wtime();
+			multiWayMergeMedianParallel(hdata, dataLen, bLen, bLen);
+			end = omp_get_wtime();
+			mmerge += (end - start);
+		}
+		rFile << boost::format("%1%%|15t|") % dataLen
+			  << boost::format("%1%%|15t|") % (smerge / test_time)
+			  << boost::format("%1%%|15t|") % (mmerge / test_time)
+			  << std::endl;
 	}
 	_mm_free(dataIn);
 	_mm_free(dataOut);
 	delete [] data;
+	rFile << std::endl << std::endl;
+	rFile.close();
 }

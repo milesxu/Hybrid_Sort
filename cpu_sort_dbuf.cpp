@@ -624,7 +624,7 @@ void quantileInitial(DoubleBuffer<rsize_t> &quantile, const rsize_t *upperBound,
 	if (initial)
 	{
 		std::copy(bound.buffers[0], bound.buffers[0] + chunkNum,
-						   quantile.buffers[1]);
+				  quantile.buffers[1]);
 		//n = baseOffset;
 	}
 	int *remain = new int[chunkNum];
@@ -668,7 +668,7 @@ void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
 	{
 		const float *lmax = NULL, *rmin = NULL;
 		rsize_t lmaxRow, rminRow;
-		for (rsize_t j  = 0; j < chunkNum; ++j)
+		for (rsize_t j = 0; j < chunkNum; ++j)
 		{
 			rsize_t testIndex = quantile.buffers[1][j];
 			if (testIndex > bound.buffers[0][j] &&
@@ -856,7 +856,7 @@ void multiWayMergeHybrid(DoubleBuffer<float> &data, size_t dataLen,
 	if (endOffset == dataLen)
 		for (size_t j = 0; j < chunkNum; ++j)
 			//for (size_t k = quantile.buffers[0][j]; k < upperBound[j]; ++k)
-				//*ptrOut++ = data.buffers[data.selector][k];
+			//*ptrOut++ = data.buffers[data.selector][k];
 		{
 			std::copy(data.buffers[data.selector] + quantile.buffers[0][j],
 					  data.buffers[data.selector] + upperBound[j], ptrOut);
@@ -1006,6 +1006,7 @@ inline void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
 	for (size_t j = 0; j < chunkNum; ++j)
 	{
 		size_t listLen = quantile.buffers[1][j] - quantile.buffers[0][j];
+		//std::cout << listLen << " ";
 		size_t uLen = listLen & factornot;
 		size_t aLen = listLen - uLen;
 		if (aLen)
@@ -1018,8 +1019,9 @@ inline void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
 		start[j] = data.Current() + quantile.buffers[0][j];
 		end[j] = data.Current() + quantile.buffers[0][j] + uLen;
 	}
-	/*std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
-	  quantile.buffers[0]);*/
+	//std::cout << std::endl;
+	std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
+			  quantile.buffers[0]);
 	if (n) std::sort(unalignArray, unalignArray + n);
 	DoubleBuffer<float> block(tempBuffer,
 							  data.buffers[data.selector ^ 1] + startOffset);
@@ -1075,15 +1077,12 @@ void multiWayMergeMedianParallel(DoubleBuffer<float> &data, size_t dataLen,
 	int unitLen = (rArrayLen >> 1) * simdLen;
 	int factornot = ~(unitLen - 1);
 	size_t mostUnalign = (unitLen - 1) * chunkNum;
-	size_t uaArrayLen = mostUnalign - mostUnalign % unitLen;
-#pragma omp parallel
+	size_t uaArrayLen = mostUnalign & factornot;
+	//#pragma omp parallel
 	{
 		size_t *quantileStart = new size_t[chunkNum];
 		size_t *quantileEnd = new size_t[chunkNum];
 		DoubleBuffer<size_t> quantile(quantileStart, quantileEnd);
-		quantile.buffers[0][0] = 0;
-		std::copy(upperBound, upperBound + chunkNum - 1,
-				  quantile.buffers[0] + 1);
 		size_t *loopUBound = new size_t[chunkNum];
 		size_t *loopLBound = new size_t[chunkNum];
 		DoubleBuffer<size_t> bound(loopLBound, loopUBound);
@@ -1091,10 +1090,18 @@ void multiWayMergeMedianParallel(DoubleBuffer<float> &data, size_t dataLen,
 		size_t offset = omp_get_thread_num() * blockLen;
 		float **start = new float*[chunkNum];
 		float **end = new float*[chunkNum];
-		for (size_t i = offset; i < dataLen; i += omp_get_max_threads() * blockLen)
+		quantile.buffers[0][0] = 0;
+		std::copy(upperBound, upperBound + chunkNum - 1,
+				  quantile.buffers[0] + 1);
+		for (size_t i = 0; i < dataLen; i += blockLen)
 		{
+			/*std::fill(quantile.buffers[1], quantile.buffers[1] + chunkNum, 0);
+			std::fill(bound.buffers[0], bound.buffers[0] + chunkNum, 0);
+			std::fill(bound.buffers[1], bound.buffers[1] + chunkNum, 0);
+			std::fill(unalignArray, unalignArray + uaArrayLen, 0.0);*/
+			//std::fill(mwBuffer, mwBuffer + blockLen, 0.0);
 			multiWayMergeMedian(data, dataLen, upperBound, chunkNum,
-								mwBuffer + offset, quantile, bound, blockLen,
+								mwBuffer, quantile, bound, blockLen,
 								i, unalignArray, uaArrayLen, factornot,
 								start, end);
 		}

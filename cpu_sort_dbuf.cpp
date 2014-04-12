@@ -1,5 +1,6 @@
 /* sort functions using double buffer class */
 #include <iostream>
+#include <vector>
 #include <algorithm>
 #include <numeric>
 #include <omp.h>
@@ -274,7 +275,7 @@ int inline loadUnalignData(float *data, size_t &offsetA, size_t &offsetB,
 //the other list, the return value is number of elements that must be loaded
 //after unaligned data loaded.
 size_t getTrailPosition(float *data, size_t bOffset, size_t eOffset, float uValue,
-					 int unitLen)
+						int unitLen)
 {
 	size_t n = 0;
 	size_t i = eOffset - unitLen;
@@ -331,11 +332,11 @@ inline void simdMergeLoop2(__m128 *rData, float **dataOut, float **blocks,
 		storeData(dataOut, rData, lanes);
 	}
 	/*float *ptr = *dataOut;
-	for (size_t i = 1; i < loop * unitLen; ++i)
-	{
-		if (*(ptr - i) < *(ptr -i - 1)) std::cout << "simd loop fail at " << i << " " << loop * unitLen << std::endl;
-	}
-	std::cout << (blocks[0] == blockBound[0]) << " " << (blocks[1] == blockBound[1]) << std::endl;*/
+	  for (size_t i = 1; i < loop * unitLen; ++i)
+	  {
+	  if (*(ptr - i) < *(ptr -i - 1)) std::cout << "simd loop fail at " << i << " " << loop * unitLen << std::endl;
+	  }
+	  std::cout << (blocks[0] == blockBound[0]) << " " << (blocks[1] == blockBound[1]) << std::endl;*/
 }
 
 //merge two lists into one list. the two list both reside in dataIn, the
@@ -372,13 +373,13 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 		//std::cout << "trail unalign appear" << std::endl;
 		unalignEnd = (float*)_mm_malloc(unitLen * sizeof(float), 16);
 		selector = loadUnalignData(dataIn, offsetA[1], offsetB[1],
-									   unalignEnd, unitLen, false);
+								   unalignEnd, unitLen, false);
 		if (selector)
 			tKeys = getTrailPosition(dataIn, offsetA[0], offsetA[1],
 									 unalignEnd[0], unitLen);
 		else
 			tKeys = getTrailPosition(dataIn, offsetB[0], offsetB[1],
-			unalignEnd[0], unitLen);
+									 unalignEnd[0], unitLen);
 		//std::cout << "array unalignEnd loaded " << tKeys << std::endl;
 	}
 	float *blocks[2], *blockBound[2];
@@ -388,11 +389,11 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 	  loop -= (tKeys / unitLen);*/
 	blockBound[selector ^ 1] -= tKeys;
 	/*for (size_t i = 0; i < loop; ++i)
-	{
-		loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
-		bitonicSort16232(rData);
-		storeData(output, rData, halfArrayLen);
-		}*/
+	  {
+	  loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
+	  bitonicSort16232(rData);
+	  storeData(output, rData, halfArrayLen);
+	  }*/
 	simdMergeLoop2(rData, output, blocks, blockBound, halfArrayLen, unitLen);
 	blockBound[selector ^ 1] += tKeys;
 	//bool ua = false;
@@ -405,13 +406,13 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 		storeData(output, rData, halfArrayLen);
 		_mm_free(unalignEnd);
 		/*int tLoop = tKeys / unitLen;
-		for (int i = 0; i < tLoop; ++i)
-		{
-			//ua = true;
-			loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
-			bitonicSort16232(rData);
-			storeData(output, rData, halfArrayLen);
-			}*/
+		  for (int i = 0; i < tLoop; ++i)
+		  {
+		  //ua = true;
+		  loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
+		  bitonicSort16232(rData);
+		  storeData(output, rData, halfArrayLen);
+		  }*/
 		simdMergeLoop2(rData, output, blocks, blockBound, halfArrayLen, unitLen);
 	}
 	storeData(output, rData + halfArrayLen, halfArrayLen);
@@ -419,8 +420,8 @@ void simdMergeGeneral(float *dataIn, float *dataOut, size_t offsetA[2],
 	/*size_t length = offsetA[1] + offsetB[1] - offsetA[0] - offsetB[0];
 	  std::cout << length << std::endl;*/
 	/*for (size_t i = 0; i < 65535; ++i)
-		if (dataOut[i] > dataOut[i + 1])
-		std::cout << "simd sort fail at: " << i << " " << ua << " " << tLoop << " " << (*output - dataOut) << " " << dataOut[i] - dataOut[i + 1] << std::endl;*/
+	  if (dataOut[i] > dataOut[i + 1])
+	  std::cout << "simd sort fail at: " << i << " " << ua << " " << tLoop << " " << (*output - dataOut) << " " << dataOut[i] - dataOut[i + 1] << std::endl;*/
 	//if (tLoop) std::cout << tLoop << std::endl;
 }
 
@@ -454,61 +455,61 @@ void mergeInRegisterUnalign(DoubleBuffer<float> &data, size_t offsetA[2],
 					 data.buffers[data.selector ^ 1] + outputOffset,
 					 offsetA, offsetB);
 	/*int unitLen = (rArrayLen >> 1) * simdLen;
-	int halfArrayLen = rArrayLen >> 1;
-	__m128 rData[rArrayLen];
-	float **output = new float*;
-	*output = data.buffers[data.selector ^ 1] + outputOffset;
-	if (!multipleOf(offsetA[0], unitLen))
-	{
-		float *unalignStart = new float[unitLen];
-		loadUnalignData(data.Current(), offsetA[0], offsetB[0], unalignStart, unitLen,
-						true);
-		loadData(unalignStart, rData + halfArrayLen, halfArrayLen);
-		bitonicSort428<2>(rData + halfArrayLen, true);
-		bitonicSort8216<1>(rData + halfArrayLen, true);
-		delete [] unalignStart;
-	}
-	else
-	{
-		loadData(data.Current() + offsetB[0], rData + halfArrayLen,
-				 halfArrayLen);
-		offsetB[0] += unitLen;
-	}
-	size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
-	float *unalignEnd = NULL;
-	if (!multipleOf(offsetA[1], unitLen))
-	{
-		unalignEnd = new float[unitLen];
-		loadUnalignData(data.Current(), offsetA[1], offsetB[1], unalignEnd,
-						unitLen, false);
-		--loop;
-	}
-	float *blocks[2], *blockBound[2];
-	blocks[0] = data.Current() + offsetA[0];
-	blocks[1] = data.Current() + offsetB[0];
-	blockBound[0] = data.Current() + offsetA[1];
-	blockBound[1] = data.Current() + offsetB[1];
-	for (size_t i = 0; i < loop; ++i)
-	{
-		loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
-		bitonicSort16232(rData);
-		//storeSimdData(rData, output, 2, halfArrayLen, 0);
-		storeData(output, rData, halfArrayLen);
-	}
-	if (unalignEnd != NULL)
-	{
-		loadData(unalignEnd, rData, halfArrayLen);
-		bitonicSort428<2>(rData, true);
-		bitonicSort8216<1>(rData, true);
-		bitonicSort16232(rData);
-		//storeSimdData(rData, output, 2, halfArrayLen, 0);
-		storeData(output, rData, rArrayLen);
-		delete [] unalignEnd;
-	}
-	else
-		storeData(output, rData + halfArrayLen, halfArrayLen);
-	//storeSimdData(rData, output, 2, halfArrayLen, halfArrayLen);
-	delete output;*/
+	  int halfArrayLen = rArrayLen >> 1;
+	  __m128 rData[rArrayLen];
+	  float **output = new float*;
+	  *output = data.buffers[data.selector ^ 1] + outputOffset;
+	  if (!multipleOf(offsetA[0], unitLen))
+	  {
+	  float *unalignStart = new float[unitLen];
+	  loadUnalignData(data.Current(), offsetA[0], offsetB[0], unalignStart, unitLen,
+	  true);
+	  loadData(unalignStart, rData + halfArrayLen, halfArrayLen);
+	  bitonicSort428<2>(rData + halfArrayLen, true);
+	  bitonicSort8216<1>(rData + halfArrayLen, true);
+	  delete [] unalignStart;
+	  }
+	  else
+	  {
+	  loadData(data.Current() + offsetB[0], rData + halfArrayLen,
+	  halfArrayLen);
+	  offsetB[0] += unitLen;
+	  }
+	  size_t loop = (offsetA[1] - offsetA[0] + offsetB[1] - offsetB[0]) / unitLen;
+	  float *unalignEnd = NULL;
+	  if (!multipleOf(offsetA[1], unitLen))
+	  {
+	  unalignEnd = new float[unitLen];
+	  loadUnalignData(data.Current(), offsetA[1], offsetB[1], unalignEnd,
+	  unitLen, false);
+	  --loop;
+	  }
+	  float *blocks[2], *blockBound[2];
+	  blocks[0] = data.Current() + offsetA[0];
+	  blocks[1] = data.Current() + offsetB[0];
+	  blockBound[0] = data.Current() + offsetA[1];
+	  blockBound[1] = data.Current() + offsetB[1];
+	  for (size_t i = 0; i < loop; ++i)
+	  {
+	  loadSimdData(rData, blocks, blockBound, 2, halfArrayLen);
+	  bitonicSort16232(rData);
+	  //storeSimdData(rData, output, 2, halfArrayLen, 0);
+	  storeData(output, rData, halfArrayLen);
+	  }
+	  if (unalignEnd != NULL)
+	  {
+	  loadData(unalignEnd, rData, halfArrayLen);
+	  bitonicSort428<2>(rData, true);
+	  bitonicSort8216<1>(rData, true);
+	  bitonicSort16232(rData);
+	  //storeSimdData(rData, output, 2, halfArrayLen, 0);
+	  storeData(output, rData, rArrayLen);
+	  delete [] unalignEnd;
+	  }
+	  else
+	  storeData(output, rData + halfArrayLen, halfArrayLen);
+	  //storeSimdData(rData, output, 2, halfArrayLen, halfArrayLen);
+	  delete output;*/
 }
 
 void mergeInRegisterUnalign(DoubleBuffer<float> &data, size_t offsetA[2],
@@ -690,7 +691,7 @@ void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
 		bound.buffers[1][lmaxRow] = quantile.buffers[1][lmaxRow] - 1;
 		bound.buffers[0][rminRow] = quantile.buffers[1][rminRow] + 1;
 		rsize_t deltaMin =
-			(bound.buffers[1][rminRow] - bound.buffers[0][rminRow]) >> 1;
+															(bound.buffers[1][rminRow] - bound.buffers[0][rminRow]) >> 1;
 		rsize_t deltaMax =
 			(bound.buffers[1][lmaxRow] - bound.buffers[0][lmaxRow]) >> 1;
 		rsize_t delta = std::min(deltaMin, deltaMax);
@@ -699,6 +700,9 @@ void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
 		quantile.buffers[1][rminRow] =
 			bound.buffers[0][rminRow] + delta;
 	}
+	/*for (size_t i = 0; i < chunkNum; ++i)
+	  std::cout << quantile.buffers[1][i]- quantile.buffers[0][i] << " ";
+	  std::cout << std::endl;*/
 }
 
 void moveBaseQuantile(DoubleBuffer<float> &data, DoubleBuffer<rsize_t> &quantile,
@@ -895,18 +899,19 @@ void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
 				  quantile.buffers[1]);
 	}
 	float *singleBuffer = (float*)_mm_malloc(mergeStride * sizeof(float), 16);
-	for (size_t i = startOffset; i < endOffset; i += mergeStride)
+	for (size_t i = startOffset, m = 0; i < endOffset; i += mergeStride, ++m)
 	{
 		quantileCompute(data.Current(), quantile, bound, upperBound, chunkNum,
 						mergeStride);
 		//the number of unaligned elements cannot exceed the number below
-		size_t mostUnalign = (unitLen - 1) * chunkNum;
-		size_t uaArrayLen = mostUnalign - mostUnalign % unitLen;
-		float *unalignArray = (float*)_mm_malloc(uaArrayLen * sizeof(float), 16);
+		//size_t mostUnalign = (unitLen - 1) * chunkNum;
+		//size_t uaArrayLen = mostUnalign - mostUnalign % unitLen;
+		//float *unalignArray = (float*)_mm_malloc(uaArrayLen * sizeof(float), 16);
+		std::vector<float> unalignVec;
 		float **start = new float*[chunkNum];
 		float **end = new float*[chunkNum];
 		int factornot = ~(unitLen - 1);
-		size_t n = 0;
+		//size_t n = 0;
 		for (size_t j = 0; j < chunkNum; ++j)
 		{
 			size_t listLen = quantile.buffers[1][j] - quantile.buffers[0][j];
@@ -914,18 +919,21 @@ void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
 			size_t aLen = listLen - uLen;
 			if (aLen)
 			{
-				std::copy(data.Current() + quantile.buffers[0][j] + uLen,
-						  data.Current() + quantile.buffers[1][j],
-						  unalignArray + n);
-				n += aLen;
+				/*std::copy(data.Current() + quantile.buffers[0][j] + uLen,
+				  data.Current() + quantile.buffers[1][j],
+				  unalignArray + n);*/
+				unalignVec.insert(unalignVec.end(),
+								  data.Current() + quantile.buffers[0][j] + uLen,
+								  data.Current() + quantile.buffers[1][j]);
+				//n += aLen;
 			}
 			start[j] = data.Current() + quantile.buffers[0][j];
 			end[j] = data.Current() + quantile.buffers[0][j] + uLen;
 		}
 		std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
 				  quantile.buffers[0]);
-		if (n)
-			std::sort(unalignArray, unalignArray + n);
+		if (!unalignVec.empty())
+			std::sort(unalignVec.begin(), unalignVec.end());
 		DoubleBuffer<float> block(singleBuffer,
 								  data.buffers[data.selector ^ 1] + i);
 		int selector = getMergeStartBuffer(chunkNum, 1);
@@ -937,11 +945,12 @@ void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
 				float *temp = ptrIn;
 				std::copy(start[j + k], end[j + k], ptrIn);
 				ptrIn += (end[j + k] - start[j + k]);
-				if (n && (unalignArray[0] > *(ptrIn - 1)))
+				if (!unalignVec.empty() && (unalignVec[0] >= *(ptrIn - 1)))
 				{
-					std::copy(unalignArray, unalignArray + n, ptrIn);
-					ptrIn += n;
-					n = 0;
+					std::copy(unalignVec.begin(), unalignVec.end(), ptrIn);
+					ptrIn += unalignVec.size();
+					//n = 0;
+					unalignVec.clear();
 				}
 				start[j + k] = temp;
 				end[j + k] = ptrIn;
@@ -953,19 +962,25 @@ void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
 			start[j / 2] = block.buffers[selector ^ 1] + startOffset;
 			end[j / 2] = block.buffers[selector ^ 1] + endOffset;
 		}
-		_mm_free(unalignArray);
+		if (!unalignVec.empty()) std::cout << "unaligned buffer is not empty! "
+										   << m << std::endl;
+		//_mm_free(unalignArray);
 		for (size_t j = chunkNum >> 1; j > 1; j >>= 1)
 		{
 			selector ^= 1;
+			size_t xlen = 0;
 			for (size_t k = 0; k < j; k += 2)
 			{
 				size_t startOffset = start[k] - block.buffers[selector];
 				size_t endOffset = end[k + 1] - block.buffers[selector];
+				xlen += (endOffset - startOffset);
 				simdMergeAlign(block.buffers[selector ^ 1] + startOffset,
 							   &start[k], &end[k]);
 				start[k / 2] = block.buffers[selector ^ 1] + startOffset;
 				end[k / 2] = block.buffers[selector ^ 1] + endOffset;
 			}
+			if (xlen != 65536)
+				std::cout << xlen << " " << m << std::endl;
 		}
 		delete [] start;
 		delete [] end;
@@ -1034,7 +1049,7 @@ inline void multiWayMergeMedian(DoubleBuffer<float> &data, size_t dataLen,
 			float *temp = ptrIn;
 			std::copy(start[j + k], end[j + k], ptrIn);
 			ptrIn += (end[j + k] - start[j + k]);
-			if (n && (unalignArray[0] > *(ptrIn - 1)))
+			if (n && (unalignArray[0] >= *(ptrIn - 1)))
 			{
 				std::copy(unalignArray, unalignArray + n, ptrIn);
 				ptrIn += n;
@@ -1090,11 +1105,11 @@ void multiWayMergeMedianParallel(DoubleBuffer<float> &data, size_t dataLen,
 		size_t offset = omp_get_thread_num() * blockLen;
 		float **start = new float*[chunkNum];
 		float **end = new float*[chunkNum];
-		quantile.buffers[0][0] = 0;
-		std::copy(upperBound, upperBound + chunkNum - 1,
-				  quantile.buffers[0] + 1);
 		for (size_t i = 0; i < dataLen; i += blockLen)
 		{
+			quantile.buffers[0][0] = 0;
+			std::copy(upperBound, upperBound + chunkNum - 1,
+					  quantile.buffers[0] + 1);
 			/*std::fill(quantile.buffers[1], quantile.buffers[1] + chunkNum, 0);
 			std::fill(bound.buffers[0], bound.buffers[0] + chunkNum, 0);
 			std::fill(bound.buffers[1], bound.buffers[1] + chunkNum, 0);

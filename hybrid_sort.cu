@@ -917,9 +917,21 @@ void multiWayTestMedian(size_t minLen, size_t maxLen, int seed)
 	hdata.selector ^= 1;
 	for (size_t i = 0; i < maxLen; i += params.cpuChunkLen)
 		resultTest(hdata.Current() + i, params.cpuChunkLen);
-	multiWayMergeMedianParallel(hdata, maxLen, params.cpuBlockLen,
-								params.cpuChunkLen);
+	/*multiWayMergeMedianParallel(hdata, maxLen, params.cpuBlockLen,
+	  params.cpuChunkLen);*/
+	size_t chunkNum = maxLen / params.cpuChunkLen;
+	size_t *upperBound = new size_t[chunkNum];
+	std::fill(upperBound, upperBound + chunkNum, params.cpuChunkLen);
+	std::partial_sum(upperBound, upperBound + chunkNum, upperBound);
+	multiWayMergeMedian(hdata, maxLen, upperBound, chunkNum, params.cpuBlockLen,
+						0, maxLen);
 	resultTest(hdata.Current(), maxLen);
+	std::sort(data, data + maxLen);
+	for (size_t i = 0; i < maxLen; ++i)
+	{
+		if (data[i] != hdata.buffers[hdata.selector][i])
+			std::cout << "unsorted at " << i << std::endl;
+	}
 	
 	/*std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
 						std::ios::app);

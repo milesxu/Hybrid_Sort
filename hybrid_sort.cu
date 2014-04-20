@@ -55,6 +55,7 @@ struct hybridDispatchParams3
 	  size_t gpuMultiwayLen;*/
 	
 	//now, dataLen must be power of 2.
+	//TODO:more portable and flexible partition method
 	hybridDispatchParams3(size_t dataLen)
 	{
 		threads = omp_get_max_threads();
@@ -82,10 +83,15 @@ struct hybridDispatchParams3
 			gpuChunkLen = dataLen >> 2;
 			gpuPart = gpuChunkLen * 3;
 		}
-		else
+		else if (dataLen < 1 << 30)
 		{
 			gpuChunkLen = 1 << 27;
 			gpuPart = (dataLen >> 2) * 3;
+		}
+		else
+		{
+			gpuChunkLen = 1 << 27;
+			gpuPart = gpuChunkLen * 7;
 		}
 		/*gpuChunkLen =
 		  dataLen < baseChunkLen ? 0 : std::min(dataLen >> 1, 1 << 27);*/
@@ -118,23 +124,26 @@ void hybrid_sort3(float *data, size_t dataLen, double (&results)[2]);
 void mergeTest(size_t minLen, size_t maxLen, int seed);
 void multiWayTest(size_t minLen, size_t maxLen, int seed);
 void multiWayTestMedian(size_t minLen, size_t maxLen, int seed);
+void hybrid_sort31(float *data, size_t dataLen, double (&results)[2]);
 
 int main(int argc, char **argv)
 {
-	rsize_t dataLen = 1 << 27; //default length of sorted data
+	rsize_t dataLen = 1 << 25; //default length of sorted data
 	int seed = 1979090303;  //default seed for generate random data sequence
 	//std::cout << omp_get_max_threads() << std::endl;
 	CommandLineArgs args(argc, argv);
 	args.GetCmdLineArgument("l", dataLen);
 	args.GetCmdLineArgument("s", seed);
 	args.DeviceInit();
-	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+	//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 	//mergeTest(1<<16, 1<<30, seed);
 	//multiWayTest(1<<16, 1<<28, seed);
-	multiWayTestMedian(1<<26, 1<<28, seed);
-	/*float *data = new float[dataLen];
-	  GenerateData(seed, data, dataLen);
-	  gpu_sort_test(data, dataLen);*/
+	//multiWayTestMedian(1<<20, 1<<23, seed);
+	float *data = new float[dataLen];
+	GenerateData(seed, data, dataLen);
+	double times[2];
+	hybrid_sort31(data, dataLen, times);
+	  /*gpu_sort_test(data, dataLen);*/
 	//gpu_sort_serial(data, dataLen, dataLen);
 	//delete [] data;
 	/*for (int dlf = 20; dlf < 26; ++dlf)
@@ -150,8 +159,8 @@ int main(int argc, char **argv)
 	/*dataLen = 1 << 23;
 	  float *data = new float[dataLen];
 	  GenerateData(seed, data, dataLen);
-	  hybrid_sort3(data, dataLen);
-	  delete [] data;*/
+	  hybrid_sort3(data, dataLen);*/
+	delete [] data;
 	std::cout << "test complete." << std::endl;
 	//resultTest(cpu_sort_sse_parallel(hdata, dataLen), dataLen);
 	//resultTest(mergeSortInBlockParallel(dataIn, dataOut, dataLen), dataLen);
@@ -289,6 +298,138 @@ void gpu_sort_serial(float *data, size_t dataLen, size_t blockLen)
 	cda.DeviceFree(d_keys.d_buffers[0]);
 	cda.DeviceFree(d_keys.d_buffers[1]);
 	cda.DeviceFree(d_temp_storage);
+}
+
+//tSelector is target seclector, specify which buffer the result should be
+//copied to.
+void gpu_sort(DoubleBuffer<float> &data, DoubleBuffer<size_t> &quantile,
+				 size_t chunkNum, size_t chunkLen, size_t tOffset, int tSelector)
+{
+    cub::DoubleBuffer<float> d_keys;
+    cub::CachingDeviceAllocator cda(true);
+    cda.DeviceAllocate((void**) &d_keys.d_buffers[0], sizeof(float) * chunkLen);
+    cda.DeviceAllocate((void**) &d_keys.d_buffers[1], sizeof(float) * chunkLen);
+    void *d_temp_storage = NULL;
+    size_t temp_storage_bytes = 0;
+	cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys,
+								   chunkLen);
+	cda.DeviceAllocate(&d_temp_storage, temp_storage_bytes);
+	size_t n = 0, offset = tOffset;
+	while (n < chunkNum)
+	{
+		size_t tempLen = 0;
+		while (tempLen < chunkLen)
+		{
+			size_t len = quantile.buffers[1][n] - quantile.buffers[0][n];
+			cudaMemcpyAsync(d_keys.d_buffers[d_keys.selector] + tempLen,
+							data.buffers[data.selector] + quantile.buffers[0][n],
+							sizeof(float) * len, cudaMemcpyHostToDevice);
+			tempLen += len;
+			++n;
+		}
+		cudaMemsetAsync(d_keys.d_buffers[d_keys.selector ^ 1], 0,
+						sizeof(float) * chunkLen);
+		cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes,
+									   d_keys, chunkLen);
+		cudaMemcpyAsync(data.buffers[tSelector] + offset, d_keys.Current(),
+						sizeof(float) * chunkLen, cudaMemcpyDeviceToHost);
+		offset += chunkLen;
+	}
+	cda.DeviceFree(d_temp_storage);
+	cda.DeviceFree(d_keys.d_buffers[0]);
+	cda.DeviceFree(d_keys.d_buffers[1]);
+}
+
+void gpu_sort(DoubleBuffer<float> &data, size_t dataLen, size_t startOffset, 
+			  size_t chunkLen, int tSelector)
+{
+    cub::DoubleBuffer<float> d_keys;
+    cub::CachingDeviceAllocator cda(true);
+    cda.DeviceAllocate((void**) &d_keys.d_buffers[0], sizeof(float) * chunkLen);
+    cda.DeviceAllocate((void**) &d_keys.d_buffers[1], sizeof(float) * chunkLen);
+    void *d_temp_storage = NULL;
+    size_t temp_storage_bytes = 0;
+	cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys,
+								   chunkLen);
+	cda.DeviceAllocate(&d_temp_storage, temp_storage_bytes);
+	for(size_t i = startOffset; i < dataLen; i += chunkLen)
+	{
+		cudaMemcpyAsync(d_keys.Current(), data.Current() + i,
+						sizeof(float) * chunkLen, cudaMemcpyHostToDevice);
+		cudaMemsetAsync(d_keys.d_buffers[d_keys.selector ^ 1], 0,
+						sizeof(float) * chunkLen);
+		cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes,
+									   d_keys, chunkLen);
+		cudaMemcpyAsync(data.buffers[tSelector] + i, d_keys.Current(),
+						sizeof(float) * chunkLen, cudaMemcpyDeviceToHost);
+	}
+	cda.DeviceFree(d_temp_storage);
+	cda.DeviceFree(d_keys.d_buffers[0]);
+	cda.DeviceFree(d_keys.d_buffers[1]);
+}
+
+void multiWayMergeGPU(DoubleBuffer<float> &data,size_t dataLen,
+					  size_t *upperBound, int chunkNum, size_t chunkLen,
+					  size_t startOffset)
+{
+	size_t *quantileStart = new size_t[chunkNum];
+	size_t *quantileEnd = new size_t[chunkNum];
+	size_t *loopUBound = new size_t[chunkNum];
+	size_t *loopLBound = new size_t[chunkNum];
+	DoubleBuffer<size_t> quantile(quantileStart, quantileEnd);
+	DoubleBuffer<size_t> bound(loopLBound, loopUBound);
+	quantile.buffers[0][0] = 0;
+	std::copy(upperBound, upperBound + chunkNum - 1, quantile.buffers[0] + 1);
+	if (startOffset)
+	{
+		quantileCompute(data.buffers[data.selector], quantile, bound, upperBound,
+						chunkNum, startOffset, true);
+		std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
+				  quantile.buffers[0]);
+	}
+	else
+	{
+		std::copy(quantile.buffers[0], quantile.buffers[0] + chunkNum,
+				  quantile.buffers[1]);
+	}
+    cub::DoubleBuffer<float> d_keys;
+    cub::CachingDeviceAllocator cda(true);
+    cda.DeviceAllocate((void**) &d_keys.d_buffers[0], sizeof(float) * chunkLen);
+    cda.DeviceAllocate((void**) &d_keys.d_buffers[1], sizeof(float) * chunkLen);
+    void *d_temp_storage = NULL;
+    size_t temp_storage_bytes = 0;
+	cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys,
+								   chunkLen);
+	cda.DeviceAllocate(&d_temp_storage, temp_storage_bytes);
+	for (size_t i = startOffset; i < dataLen; i += chunkLen)
+	{
+		quantileCompute(data.Current(), quantile, bound, upperBound, chunkNum,
+						chunkLen);
+		size_t tempLen = 0;
+		for (int j = 0; j < chunkNum; ++j)
+		{
+			size_t len = quantile.buffers[1][j] - quantile.buffers[0][j];
+			cudaMemcpy(d_keys.d_buffers[d_keys.selector] + tempLen,
+							data.buffers[data.selector] + quantile.buffers[0][j],
+							sizeof(float) * len, cudaMemcpyHostToDevice);
+			tempLen += len;
+		}
+		cudaMemset(d_keys.d_buffers[d_keys.selector ^ 1], 0,
+						sizeof(float) * chunkLen);
+		cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes,
+									   d_keys, chunkLen);
+		cudaMemcpy(data.buffers[data.selector ^ 1] + i, d_keys.Current(),
+						sizeof(float) * chunkLen, cudaMemcpyDeviceToHost);
+		std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
+				  quantile.buffers[0]);
+	}
+	cda.DeviceFree(d_temp_storage);
+	cda.DeviceFree(d_keys.d_buffers[0]);
+	cda.DeviceFree(d_keys.d_buffers[1]);
+	delete [] quantileStart;
+	delete [] quantileEnd;
+	delete [] loopUBound;
+	delete [] loopLBound;
 }
 
 void gpu_sort_test(float *data, rsize_t dataLen)
@@ -507,7 +648,9 @@ void multiWayStage(DoubleBuffer<float> &data, size_t dataLen,
 		{
 #pragma omp section
 			{
-				multiWayMergeHybrid(data, dataLen, upperBound, boundLen, params.gpuChunkSize, 0, params.gpuMultiwayLen);
+				multiWayMergeHybrid(data, dataLen, upperBound, boundLen,
+									params.gpuChunkSize, 0,
+									params.gpuMultiwayLen);
 				int selector = data.selector ^ 1;
 				updateMergeSelector(selector, params.multiwayBlockSize);
 				gpu_sort(data, params.gpuMultiwayLen, params.gpuChunkSize, data.selector ^ 1, selector);
@@ -786,6 +929,52 @@ void multiWayMergeSet(DoubleBuffer<float> &data, size_t dataLen,
 	delete [] end;
 }
 
+//TODO:does use task generation process can improve performance?
+void multiWayMergeCPU(DoubleBuffer<float> &data, size_t dataLen,
+					  size_t *upperBound, size_t chunkNum, size_t endLen, 
+					  hybridDispatchParams3<float> params)
+{
+	if (chunkNum == 1) return;
+    rsize_t *loopUBound = new rsize_t[chunkNum];
+    rsize_t *loopLBound = new rsize_t[chunkNum];
+	DoubleBuffer<rsize_t> bound(loopLBound, loopUBound);
+	size_t *quantileSet = new size_t[chunkNum * (params.threads + 1)];
+	//TODO: initial of first array of quantile must all move into quantile
+	//compute functions.
+	quantileSet[0] = 0;
+	std::copy(upperBound, upperBound + chunkNum - 1, quantileSet + 1);
+	float *mwBuffer = (float*)_mm_malloc(params.cpuChunkLen * sizeof(float), 16);
+	float **start = new float*[chunkNum * params.threads];
+	float **end   = new float*[chunkNum * params.threads];
+	for(size_t i  = 0; i < endLen; i+= params.cpuChunkLen)
+	{
+		quantileSetCompute(data, quantileSet, bound, upperBound, chunkNum,
+						   params.cpuBlockLen, params.threads);
+		int w;
+#pragma omp parallel private(w)
+		{
+			w = omp_get_thread_num();
+			std::vector<float> unalignVec;
+			size_t bOffset = w * params.cpuBlockLen;
+			size_t cOffset = w * chunkNum;
+			DoubleBuffer<size_t> quantile(quantileSet + cOffset,
+										  quantileSet + cOffset + chunkNum);
+			multiWayMergeBitonic(data, chunkNum, mwBuffer + bOffset, i + bOffset,
+								 quantile, unalignVec, start + cOffset,
+								 end + cOffset);
+		}
+		std::copy(quantileSet + chunkNum * params.threads,
+				  quantileSet + chunkNum * (params.threads + 1), quantileSet);
+	}
+	//data.selector ^= 1;
+	delete [] loopUBound;
+	delete [] loopLBound;
+	delete [] quantileSet;
+	_mm_free(mwBuffer);
+	delete [] start;
+	delete [] end;
+}
+
 void mergeTest(size_t minLen, size_t maxLen, int seed)
 {
 	std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
@@ -879,47 +1068,91 @@ void multiWayTest(size_t minLen, size_t maxLen, int seed)
 }
 
 
-/*void hybrid_sort31(float *data, size_t dataLen, double (&results)[2])
-  {
-  float* dataIn = (float*)_mm_malloc(dataLen * sizeof(float), 16);
-  float* dataOut= (float*)_mm_malloc(dataLen * sizeof(float), 16);
-  std::copy(data, data + dataLen, dataIn);
-  DoubleBuffer<float> hdata(dataIn, dataOut);
-  
-  hybridDispatchParams3<float> params(dataLen);
-  #pragma omp parallel 
-  {
-  omp_set_nested(1);
-  #pragma omp sections
-  {
-  #pragma omp section
-  {
-  if (params.gpuPart)
-  {
-  }
-  }
-  #pragma omp section
-  {
-  #pragma omp parallel for
-  }
-  }
-  }
-  
-  #pragma omp parallel 
-  {
-  omp_set_nested(1);
-  #pragma omp sections
-  {
-  #pragma omp section
-  {
-  }
-  #pragma omp section
-  {
-  #pragma omp parallel for
-  }
-  }
-  }
-  }*/
+void hybrid_sort31(float *data, size_t dataLen, double (&results)[2])
+{
+	float* dataIn = (float*)_mm_malloc(dataLen * sizeof(float), 16);
+	float* dataOut= (float*)_mm_malloc(dataLen * sizeof(float), 16);
+	std::copy(data, data + dataLen, dataIn);
+	DoubleBuffer<float> hdata(dataIn, dataOut);
+	hybridDispatchParams3<float> params(dataLen);
+#pragma omp parallel 
+	{
+		omp_set_nested(1);
+#pragma omp sections
+		{
+#pragma omp section
+			{
+				if (params.gpuPart)
+				{
+					std::cout << "gpu sort beginning..." << std::endl;
+					//TODO: can std::copy or partial_sum function used with
+					//0 elements?
+					int selector = 0;
+					updateSelectorGeneral(selector, 8, params.cpuPart);
+					gpu_sort(hdata, dataLen, params.cpuPart, params.gpuChunkLen,
+							 selector);
+				}
+			}
+#pragma omp section
+			{
+				chunkMerge(hdata, params.cpuPart, params);
+				medianMerge(hdata, params.cpuPart, params);
+				std::cout << "merge stage complete." << std::endl;
+			}
+		}
+	}
+	cudaDeviceSynchronize();
+	for(size_t i = params.cpuPart; i < dataLen; i += params.gpuChunkLen)
+	    resultTest(hdata.Current() + i, params.gpuChunkLen);
+	//TODO: cpu may not sort to one part, it may have several small parts.
+	//this can be decided by test GPU and CPU perfomance. how to guarantee
+	//portable?
+	//or is there a method to notify CPU, let it terminate sort work, though
+	//it may produce a more irregular upperbound, it does not matter to
+	//multiwaymerge.
+	//int chunkNum = params.gpuPart / params.gpuChunkLen + 1;
+	int chunkNum = params.gpuPart ? (params.gpuPart / params.gpuChunkLen + 1) : 1;
+	size_t *upperBound = new size_t[chunkNum];
+	upperBound[0] = params.cpuPart;
+	std::fill(upperBound + 1, upperBound + chunkNum, params.gpuChunkLen);
+	std::partial_sum(upperBound, upperBound + chunkNum, upperBound);
+	std::cout << "upper bound initialized." << std::endl;
+#pragma omp parallel 
+	{
+		omp_set_nested(1);
+#pragma omp sections
+		{
+#pragma omp section
+			{
+				if(params.gpuPart)
+				{
+					multiWayMergeGPU(hdata, dataLen, upperBound, chunkNum,
+									 params.gpuChunkLen, params.cpuPart);
+				}
+			}
+#pragma omp section
+			{
+				multiWayMergeCPU(hdata, dataLen, upperBound, chunkNum,
+								 params.cpuPart, params);
+			}
+		}
+	}
+	cudaDeviceSynchronize();
+	hdata.selector ^= 1;
+	std::cout << "hybrid sort complete, test begin..." << std::endl;
+	resultTest(hdata.Current(), dataLen);
+	std::sort(data, data + dataLen);
+	for (size_t i = 0; i < dataLen; ++i)
+	{
+		if(data[i] != hdata.buffers[hdata.selector][i])
+			std::cout << "inconsistent at " << i << " " << data[i] << " " << hdata.buffers[hdata.selector][i] << std::endl;
+	}
+	std::cout << "test complete in function." << std::endl;
+
+	delete [] upperBound;
+	_mm_free(dataIn);
+	_mm_free(dataOut);
+}
 
 void hybrid_sort_test(size_t minLen, size_t maxLen, int seed)
 {
@@ -944,7 +1177,7 @@ void multiWayTestMedian(size_t minLen, size_t maxLen, int seed)
 	DoubleBuffer<float> hdata(dataIn, dataOut);
 	
 	hybridDispatchParams3<float> params(maxLen, 0);
-	for (size_t i = 0; i < maxLen; i += params.cpuChunkLen)
+	/*for (size_t i = 0; i < maxLen; i += params.cpuChunkLen)
 	{
 #pragma omp parallel for
 		for (size_t j = i; j < i + params.cpuChunkLen; j += params.cpuBlockLen)
@@ -960,7 +1193,7 @@ void multiWayTestMedian(size_t minLen, size_t maxLen, int seed)
 									params.cpuBlockLen, params.cpuBlockLen);
 	}
 	updateSelectorGeneral(hdata.selector, 8, params.cpuBlockLen);
-	hdata.selector ^= 1;
+	hdata.selector ^= 1;*/
 	/*for (size_t i = 0; i < maxLen; i += params.cpuChunkLen)
 	  resultTest(hdata.Current() + i, params.cpuChunkLen);*/
 	/*multiWayMergeMedianParallel(hdata, maxLen, params.cpuBlockLen,
@@ -971,8 +1204,8 @@ void multiWayTestMedian(size_t minLen, size_t maxLen, int seed)
 	  std::partial_sum(upperBound, upperBound + chunkNum, upperBound);
 	  multiWayMergeMedian(hdata, maxLen, upperBound, chunkNum, params.cpuBlockLen,
 	  0, maxLen);*/
-	multiWayMergeSet(hdata, maxLen, params, params.cpuChunkLen);
-	resultTest(hdata.Current(), maxLen);
+	/*multiWayMergeSet(hdata, maxLen, params, params.cpuChunkLen);
+	  resultTest(hdata.Current(), maxLen);*/
 	/*std::sort(data, data + maxLen);
 	  for (size_t i = 0; i < maxLen; ++i)
 	  {
@@ -980,7 +1213,7 @@ void multiWayTestMedian(size_t minLen, size_t maxLen, int seed)
 	  std::cout << "unsorted at " << i << std::endl;
 	  }*/
 	
-	std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
+	/*std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
 						std::ios::app);
 	if (rFile.is_open()) 
 		rFile << "multiway merge set result" << std::endl
@@ -1009,7 +1242,7 @@ void multiWayTestMedian(size_t minLen, size_t maxLen, int seed)
 				{
 					DoubleBuffer<float> block(hdata.buffers[hdata.selector] + k,
 											  hdata.buffers[hdata.selector^1]+k);
-					singleThreadMerge(block, paramd.cpuBlockLen);
+											  singleThreadMerge(block, paramd.cpuBlockLen);
 				}
 				DoubleBuffer<float> chunk(hdata.buffers[hdata.selector] + j,
 										  hdata.buffers[hdata.selector ^ 1] + j);
@@ -1023,8 +1256,8 @@ void multiWayTestMedian(size_t minLen, size_t maxLen, int seed)
 			updateSelectorGeneral(hdata.selector, 8, paramd.cpuBlockLen);
 			hdata.selector ^= 1;
 			start = omp_get_wtime();
-			/*multiWayMergeMedianParallel(hdata, dataLen, paramd.cpuBlockLen,
-			  paramd.cpuChunkLen);*/
+			//multiWayMergeMedianParallel(hdata, dataLen, paramd.cpuBlockLen,
+			 // paramd.cpuChunkLen);
 			multiWayMergeSet(hdata, dataLen, paramd, paramd.cpuChunkLen);
 			end = omp_get_wtime();
 			mmerge += (end - start);
@@ -1033,10 +1266,10 @@ void multiWayTestMedian(size_t minLen, size_t maxLen, int seed)
 			  << boost::format("%1%%|15t|") % (smerge / test_time)
 			  << boost::format("%1%%|15t|") % (mmerge / test_time)
 			  << std::endl;
-	}
+}*/
 	_mm_free(dataIn);
 	_mm_free(dataOut);
 	delete [] data;
-	rFile << std::endl << std::endl;
-	rFile.close();
+	/*rFile << std::endl << std::endl;
+	  rFile.close();*/
 }

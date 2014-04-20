@@ -72,12 +72,19 @@ void multiWayMergeMedianParallel(DoubleBuffer<float> &data, size_t dataLen,
 								 size_t blockLen, size_t chunkLen);
 void quantileSetCompute(DoubleBuffer<float> &data, size_t *quantileSet,
 						DoubleBuffer<size_t> &bound, const size_t *upperBound,
-						size_t chunkNum, size_t mergeStride, int setLen);
+						size_t chunkNum, size_t mergeStride, int setLen,
+						size_t startOffset = 0);
 void multiWayMergeBitonic(DoubleBuffer<float> &data, size_t chunkNum,
 								 float *tempBuffer, size_t startOffset,
 								 DoubleBuffer<size_t> &quantile,
 								 std::vector<float> &unalignVec, float **start,
 								 float **end);
-
+//Default argument for a given parameter has to be specified no more than once.
+//Specifying it more than once (even with the same default value) is illegal.
+void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
+					 DoubleBuffer<rsize_t> &bound, const rsize_t *upperBound,
+					 rsize_t chunkNum, rsize_t quantileLen,
+					 bool initial = false);
+	
 #endif /* CPU_SORT_H_ */
 

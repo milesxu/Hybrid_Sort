@@ -692,10 +692,12 @@ void quantileInitial(DoubleBuffer<rsize_t> &quantile, const rsize_t *upperBound,
 	delete [] remain;
 }
 
+//TODO: think of the relation of quantile initial and quantile compute, to
+//simplify the program.
 void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
 					 DoubleBuffer<rsize_t> &bound, const rsize_t *upperBound,
 					 rsize_t chunkNum, rsize_t quantileLen,
-					 bool initial = false)
+					 bool initial)
 {
 	std::copy(quantile.buffers[0], quantile.buffers[0] + chunkNum,
 			  bound.buffers[0]);
@@ -743,8 +745,17 @@ void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
 
 void quantileSetCompute(DoubleBuffer<float> &data, size_t *quantileSet,
 						DoubleBuffer<size_t> &bound, const size_t *upperBound,
-						size_t chunkNum, size_t mergeStride, int setLen)
+						size_t chunkNum, size_t mergeStride, int setLen,
+						size_t startOffset)
 {
+	if(startOffset)
+	{
+		DoubleBuffer<size_t> squantile(quantileSet, quantileSet + chunkNum);
+		quantileCompute(data.Current(), squantile, bound, upperBound, chunkNum,
+						startOffset);
+		std::copy(squantile.buffers[1], squantile.buffers[1] + chunkNum,
+				  squantile.buffers[0]);
+	}
 	for (int i = 0, j = 0; i < setLen; ++i, j += chunkNum)
 	{
 		DoubleBuffer<size_t> quantile(quantileSet + j,
@@ -755,6 +766,10 @@ void quantileSetCompute(DoubleBuffer<float> &data, size_t *quantileSet,
 						mergeStride);
 	}
 	//std::cout << "quantile set compute complete." << std::endl;
+}
+
+void quantileComputeUnit()
+{
 }
 
 void moveBaseQuantile(DoubleBuffer<float> &data, DoubleBuffer<rsize_t> &quantile,

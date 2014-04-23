@@ -544,26 +544,13 @@ void multiWayMergeCPU(DoubleBuffer<float> &data, size_t dataLen,
 	{
 		quantileSetCompute(data, quantileSet, bound, upperBound, chunkNum,
 						   params.cpuBlockLen, params.threads);
-		std::cout << "quantile set compute complete." << std::endl;
-	//synchronize problem is the reason that parallel for loop cannot be
-	//used. otherwise multi-thread may sort data in same position. this version
-	//use static temp buffer for each thread to solve the problem, which may
-	//not be best performance.
-	//TODO: try circular buffer and/or parallel task to get the best perfomance
-	//solution.
-		for(size_t x = 0; x < params.threads; ++x)
-		{
-			size_t y = 0;
-			size_t *st = quantileSet + x * chunkNum;
-			size_t *ed = st + chunkNum;
-			for(size_t z = 0; z < chunkNum; ++z)
-			{
-				y += (ed[z] - st[z]);
-			}
-			std::cout << y << " ";
-		}
-		std::cout << std::endl;
-		//#pragma omp parallel for
+		//synchronize problem is the reason that parallel for loop cannot be
+		//used. otherwise multi-thread may sort data in same position. this
+		//version use static temp buffer for each thread to solve the problem,
+		//which may not be best performance.
+		//TODO: try circular buffer and/or parallel task to get the best
+		//perfomance solution.
+#pragma omp parallel for
 		for(size_t j = 0; j < params.threads; ++j)
 		{
 			std::vector<float> unalignVec;
@@ -578,8 +565,6 @@ void multiWayMergeCPU(DoubleBuffer<float> &data, size_t dataLen,
 		std::copy(quantileSet + chunkNum * params.threads,
 				  quantileSet + chunkNum * (params.threads + 1), quantileSet);
 	}
-	std::cout << "parallel execution complete." << std::endl;
-	//data.selector ^= 1;
 	delete [] loopUBound;
 	delete [] loopLBound;
 	delete [] quantileSet;
@@ -631,7 +616,6 @@ void hybrid_sort31(float *data, size_t dataLen, double (&results)[2])
 			{
 				if (params.gpuPart)
 				{
-					std::cout << "gpu sort beginning..." << std::endl;
 					//TODO: can std::copy or partial_sum function used with
 					//0 elements?
 					int selector = 0;
@@ -644,14 +628,13 @@ void hybrid_sort31(float *data, size_t dataLen, double (&results)[2])
 			{
 				chunkMerge(hdata, params.cpuPart, params);
 				medianMerge(hdata, params.cpuPart, params);
-				std::cout << "merge stage complete." << std::endl;
 			}
 		}
 	}
 	cudaDeviceSynchronize();
 	/*for(size_t i = params.cpuPart; i < dataLen; i += params.gpuChunkLen)
-	    resultTest(hdata.Current() + i, params.gpuChunkLen);
-		resultTest(hdata.Current(), params.cpuPart);*/
+	  resultTest(hdata.Current() + i, params.gpuChunkLen);
+	  resultTest(hdata.Current(), params.cpuPart);*/
 	//TODO: cpu may not sort to one part, it may have several small parts.
 	//this can be decided by test GPU and CPU perfomance. how to guarantee
 	//portable?
@@ -664,7 +647,6 @@ void hybrid_sort31(float *data, size_t dataLen, double (&results)[2])
 	upperBound[0] = params.cpuPart;
 	std::fill(upperBound + 1, upperBound + chunkNum, params.gpuChunkLen);
 	std::partial_sum(upperBound, upperBound + chunkNum, upperBound);
-	std::cout << "upper bound initialized. " << chunkNum << std::endl;
 #pragma omp parallel 
 	{
 		omp_set_nested(1);
@@ -687,16 +669,14 @@ void hybrid_sort31(float *data, size_t dataLen, double (&results)[2])
 	multiWayMergeCPU(hdata, dataLen, upperBound, chunkNum, params);
 	cudaDeviceSynchronize();
 	hdata.selector ^= 1;
-	std::cout << "hybrid sort complete, test begin..." << std::endl;
 	resultTest(hdata.Current(), dataLen);
-	/*std::sort(data, data + dataLen);
+	std::sort(data, data + dataLen);
 	for (size_t i = 0; i < dataLen; ++i)
 	{
 		if(data[i] != hdata.buffers[hdata.selector][i])
 			std::cout << "inconsistent at " << i << " " << data[i] << " " << hdata.buffers[hdata.selector][i] << std::endl;
-			}*/
-	std::cout << "test complete in function." << std::endl;
-	
+	}
+		
 	delete [] upperBound;
 	_mm_free(dataIn);
 	_mm_free(dataOut);

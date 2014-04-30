@@ -1024,7 +1024,7 @@ void multiWayMergeBitonic(DoubleBuffer<float> &data, size_t chunkNum,
 			unalignMove(unalignVec, ptrIn, start, end, j + k);
 		simdMergeUnit(block, start, end, j, cIdx, selector);
 	}
-		size_t cLen = cIdx;
+	size_t cLen = cIdx;
 	cIdx = 0;
 	while (cLen > 1)
 	{
@@ -1054,7 +1054,7 @@ void multiWayMergeMedianParallel(DoubleBuffer<float> &data, size_t dataLen,
 		(float*)_mm_malloc(stride * omp_get_max_threads() *sizeof(float), 16);
 	int unitLen = (rArrayLen >> 1) * simdLen;
 	int factornot = ~(unitLen - 1);
-	#pragma omp parallel
+#pragma omp parallel
 	{
 		size_t *quantileStart = new size_t[chunkNum];
 		size_t *quantileEnd = new size_t[chunkNum];
@@ -1201,6 +1201,7 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 							 int chunkNum, size_t blockLen)
 {
 	int blockNum = dataLen / blockLen;
+	//std::cout << "blockNum: " << blockNum << std::endl;
 	size_t chunkLen = dataLen / chunkNum;
 	int pairNum = chunkNum >> 1;
 	int medianNum =  blockNum - pairNum;
@@ -1209,7 +1210,7 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 	size_t *medianA = new size_t[medianNum];
 	size_t *medianB = new size_t[medianNum];
 	//may read much fewer elements than sort, so can compute all medians.
-#pragma omp parallel for
+	//#pragma omp parallel for schedule(dynamic, 8)
 	for (int j = 0; j < medianNum; ++j)
 	{
 		//length can greater than the length of a chunk.
@@ -1221,7 +1222,7 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 		medianA[j] = baseOffset + mA;
 		medianB[j] = baseOffset + chunkLen + mB;
 	}
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
 	for (int j = 0; j < blockNum; ++j)
 	{
 		size_t offsetA[2], offsetB[2];
@@ -1250,7 +1251,7 @@ void multiThreadMergeGeneral(float *dataIn, float* dataOut, size_t dataLen,
 			offsetA[1] = medianA[baseIndex];
 			offsetB[1] = medianB[baseIndex];
 		}
-				simdMergeGeneral(dataIn, dataOut + j * blockLen, offsetA, offsetB);
+		simdMergeGeneral(dataIn, dataOut + j * blockLen, offsetA, offsetB);
 	}
 	delete [] medianA;
 	delete [] medianB;
@@ -1262,10 +1263,11 @@ void multiThreadMerge(DoubleBuffer<float> &data, size_t dataLen, int chunkNum,
 {
 	for (int i = chunkNum; i > 1; i >>= 1)
 	{
-				multiThreadMergeGeneral(data.buffers[data.selector],
+		multiThreadMergeGeneral(data.buffers[data.selector],
 								data.buffers[data.selector ^ 1], dataLen, i,
 								blockLen);
 		data.selector ^= 1;
 	}
 }
 
+ 

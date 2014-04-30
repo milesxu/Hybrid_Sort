@@ -2,6 +2,7 @@
 #include <stdio.h>
 #endif
 
+#include <algorithm>
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random/uniform_real.hpp>
 
@@ -27,12 +28,24 @@ template<typename T>bool resultTest(T *data, size_t N)
 		if (data[i] > data[i + 1])
         {
             std::cout << "unsorted at fucking " << i << "! " << std::endl;
-			std::cout << "fail value: " << data[i] << " " << data[i + 1] << std::endl;
+			std::cout << "fail value: " << data[i] << " " << data[i + 1]
+					  << std::endl;
             return false;
         }
     }
     std::cout << "successfully sorted!" << std::endl;
     return true;
+}
+
+template<typename T>void resultCheck(T* dataA, T* dataB, size_t N)
+{
+	std::sort(dataA, dataA + N);
+	for (size_t i = 0; i < N; ++i)
+	{
+		if(dataA[i] != dataB[i])
+			std::cout << "inconsistent at " << i << " " << dataA[i] << " "
+					  << dataB[i] << std::endl;
+	}
 }
 
 inline size_t cacheSizeInByte()

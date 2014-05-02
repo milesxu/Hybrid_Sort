@@ -130,10 +130,8 @@ int main(int argc, char **argv)
 	args.GetCmdLineArgument("l", dataLen);
 	args.GetCmdLineArgument("s", seed);
 	args.DeviceInit();
-	hybrid_sort_test(1<<16, 1<<30, seed);
-	//mergeTest(1<<16, 1<<30, seed);
-	//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-	//mergeTest(1<<16, 1<<30, seed);
+	//hybrid_sort_test(1<<16, 1<<30, seed);
+	mergeTest(1<<23, 1<<28, seed);
 	//multiWayTest(1<<16, 1<<28, seed);
 	//multiWayTestMedian(1<<20, 1<<23, seed);
 	/*float *data = new float[dataLen];
@@ -513,17 +511,86 @@ void medianMerge(DoubleBuffer<float> &data, hybridDispatchParams3<float> &params
 	}
 }
 
-// void medianMergeLongList(DoubleBuffer<float> &data, size_t dataLen,
-// 						 hybridDispatchParams3<float> &params, size_t partialLen)
-// {
-// 	for (size_t i = 0; i < dataLen; i += partialLen)
-// 	{
-// 		DoubleBuffer<float> partial(data.buffers[data.selector] + i,
-// 									data.buffers[data.selector ^ 1] + i);
-// 		medianMerge(partial, partialLen, params);
-// 	}
-// 	updateSelectorGeneral(data.selector, params.cpuChunkLen, partialLen);
-// }
+void multiWayMergeSet(DoubleBuffer<float> &data, size_t *upperBound,
+					  size_t chunkNum, size_t *quantileSet, size_t blockLen,
+					  size_t blockNum, size_t startOffset)
+{
+	int bufferNum = omp_get_max_threads();
+	//std::cout << bufferNum << std::endl;
+    size_t *loopUBound = new size_t[chunkNum * bufferNum];
+    size_t *loopLBound = new size_t[chunkNum * bufferNum];
+	DoubleBuffer<size_t> bound(loopLBound, loopUBound);
+	quantileSetCompute(data, quantileSet, bound, upperBound, chunkNum,
+					   blockLen, blockNum);
+	//std::cout << "quantile computation complete." << std::endl;
+	float *mwBuffer =
+		(float*)_mm_malloc(blockLen * bufferNum * sizeof(float), 16);
+	float **start = new float*[chunkNum * bufferNum];
+	float **end   = new float*[chunkNum * bufferNum];
+#pragma omp parallel for schedule(dynamic)
+	for(size_t i = 0; i < blockNum; ++i)
+	{
+		int w = omp_get_thread_num();
+		std::vector<float> unalignVec;
+		DoubleBuffer<size_t> quantile(quantileSet + i * chunkNum,
+									  quantileSet + i * chunkNum + chunkNum);
+		multiWayMergeBitonic(data, chunkNum, mwBuffer + w * blockLen,
+							 startOffset + i * blockLen, quantile, unalignVec,
+							 start + w * chunkNum, end + w * chunkNum);
+	}
+	delete [] loopLBound;
+	delete [] loopUBound;
+	_mm_free(mwBuffer);
+	delete [] start;
+	delete [] end;
+}
+
+void multiWayMergeRecursion(DoubleBuffer<float> &data, size_t chunkLen,
+							size_t chunkNum, size_t blockLen, int wayLen = 16)
+{
+	/*for (size_t i = 0; i < chunkNum; ++i)
+	{
+		size_t offs = i * chunkLen;
+		resultTest(data.Current() + offs, chunkLen);
+		}*/
+	std::cout << chunkNum << std::endl;
+	if(chunkNum == 1) return;
+	int step = std::min(chunkNum, size_t(wayLen));
+	size_t *upperBound = new size_t[step];
+	size_t stride = step * chunkLen;
+	size_t blockNum = stride / blockLen;
+	size_t *quantileSet = new size_t[chunkNum * (blockNum + 1)];
+	size_t offset = 0;
+	for(int i = 0; i < chunkNum; i += step)
+	{
+		std::fill(upperBound, upperBound + step, chunkLen);
+		//std::cout << offset << std::endl;
+		upperBound[0] += offset;
+		std::partial_sum(upperBound, upperBound + step, upperBound);
+		//TODO: initial of first array of quantile must all move into quantile
+		//compute functions.
+		quantileSet[0] = offset;
+		std::copy(upperBound, upperBound + chunkNum - 1, quantileSet + 1);
+		multiWayMergeSet(data, upperBound, step, quantileSet, blockLen,
+						 blockNum, offset);
+		std::copy(quantileSet + chunkNum * blockNum,
+				  quantileSet + chunkNum * blockNum + chunkNum, quantileSet);
+		offset += stride;
+		//std::cout << offset << std::endl;
+	}
+	delete [] upperBound;
+	delete [] quantileSet;
+	data.selector ^= 1;
+	multiWayMergeRecursion(data, stride, chunkNum / step, blockLen, wayLen);
+}
+
+void mergeStep3(DoubleBuffer<float> &data, hybridDispatchParams3<float> &params,
+				int wayLen = 8)
+{
+	size_t chunkNum = params.cpuPart / params.cpuChunkLen;
+	multiWayMergeRecursion(data, params.cpuChunkLen, chunkNum,
+						   params.cpuBlockLen);
+}
 
 void hybrid_sort3(float *data, size_t dataLen, double (&results)[2])
 {
@@ -534,10 +601,11 @@ void hybrid_sort3(float *data, size_t dataLen, double (&results)[2])
 	
 	hybridDispatchParams3<float> params(dataLen, 0);
 	chunkMerge(hdata, params);
-	medianMerge(hdata, params);
+	//medianMerge(hdata, params);
+	mergeStep3(hdata, params);
 	resultTest(hdata.Current(), dataLen);
 	
-	const int test_time = 30;
+	const int test_time = 5;
 	double cmerge = 0.0, mmerge = 0.0;
 	for (int i = 0; i < test_time; ++i)
 	{
@@ -550,7 +618,8 @@ void hybrid_sort3(float *data, size_t dataLen, double (&results)[2])
 		end = omp_get_wtime();
 		cmerge += (end - start);
 		start = omp_get_wtime();
-		medianMerge(hdata, params);
+		//medianMerge(hdata, params);
+		mergeStep3(hdata, params);
 		end = omp_get_wtime();
 		mmerge += (end - start);
 	}
@@ -566,9 +635,9 @@ void hybrid_sort3(float *data, size_t dataLen, double (&results)[2])
 void multiWayMergeCPU(DoubleBuffer<float> &data, size_t *upperBound,
 					  size_t chunkNum, hybridDispatchParams3<float> params)
 {
-    rsize_t *loopUBound = new rsize_t[chunkNum];
-    rsize_t *loopLBound = new rsize_t[chunkNum];
-	DoubleBuffer<rsize_t> bound(loopLBound, loopUBound);
+    size_t *loopUBound = new size_t[chunkNum * params.threads];
+    size_t *loopLBound = new size_t[chunkNum * params.threads];
+	DoubleBuffer<size_t> bound(loopLBound, loopUBound);
 	size_t *quantileSet = new size_t[chunkNum * (params.threads + 1)];
 	//TODO: initial of first array of quantile must all move into quantile
 	//compute functions.
@@ -577,7 +646,7 @@ void multiWayMergeCPU(DoubleBuffer<float> &data, size_t *upperBound,
 	float *mwBuffer = (float*)_mm_malloc(params.cpuChunkLen * sizeof(float), 16);
 	float **start = new float*[chunkNum * params.threads];
 	float **end   = new float*[chunkNum * params.threads];
-	for(size_t i  = 0; i < params.cpuPart; i+= params.cpuChunkLen)
+	for(size_t i  = 0; i < params.cpuPart; i += params.cpuChunkLen)
 	{
 		quantileSetCompute(data, quantileSet, bound, upperBound, chunkNum,
 						   params.cpuBlockLen, params.threads);
@@ -612,31 +681,33 @@ void multiWayMergeCPU(DoubleBuffer<float> &data, size_t *upperBound,
 
 void mergeTest(size_t minLen, size_t maxLen, int seed)
 {
-	std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
+	/*std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
 						std::ios::app);
 	if (rFile.is_open()) 
-		rFile << boost::format("%1%%|15t|") % "data length"
+		rFile << "cpu merge test results\n"
+			  << boost::format("%1%%|15t|") % "data length"
 			  << boost::format("%1%%|15t|") % "chunk merge"
-			  << boost::format("%1%%|15t|") % "median merge"
-			  << std::endl;
+			  << boost::format("%1%%|15t|") % "multiway merge"
+			  << std::endl;*/
 	
 	float *data = new float[maxLen];
 	GenerateData(seed, data, maxLen);
 	//Now, all length of data lists must be power of 2.
 	for (size_t dataLen = minLen; dataLen <= maxLen; dataLen <<= 1)
 	{
+		std::cout << "data length: " << dataLen << std::endl;
 		double results[2];
 		hybrid_sort3(data, dataLen, results);
-		rFile << boost::format("%1%%|15t|") % dataLen
+		/*rFile << boost::format("%1%%|15t|") % dataLen
 			  << boost::format("%1%%|15t|") % results[0]
 			  << boost::format("%1%%|15t|") % results[1]
-			  << std::endl;
-		/*std::cout << "merge test function result: " << results[0] << " "
-		  << results[1] << std::endl;*/
+			  << std::endl;*/
+		std::cout << "merge test function result: " << results[0] << " "
+		  << results[1] << std::endl;
 	}
 	delete [] data;
-	rFile << std::endl << std::endl;
-	rFile.close();
+	/*rFile << std::endl << std::endl;
+	  rFile.close();*/
 }
 
 void hybridMergeStep(DoubleBuffer<float> &data,

@@ -516,13 +516,11 @@ void multiWayMergeSet(DoubleBuffer<float> &data, size_t *upperBound,
 					  size_t blockNum, size_t startOffset)
 {
 	int bufferNum = omp_get_max_threads();
-	//std::cout << bufferNum << std::endl;
     size_t *loopUBound = new size_t[chunkNum * bufferNum];
     size_t *loopLBound = new size_t[chunkNum * bufferNum];
 	DoubleBuffer<size_t> bound(loopLBound, loopUBound);
 	quantileSetCompute(data, quantileSet, bound, upperBound, chunkNum,
 					   blockLen, blockNum);
-	//std::cout << "quantile computation complete." << std::endl;
 	float *mwBuffer =
 		(float*)_mm_malloc(blockLen * bufferNum * sizeof(float), 16);
 	float **start = new float*[chunkNum * bufferNum];
@@ -549,11 +547,11 @@ void multiWayMergeRecursion(DoubleBuffer<float> &data, size_t chunkLen,
 							size_t chunkNum, size_t blockLen, int wayLen = 16)
 {
 	/*for (size_t i = 0; i < chunkNum; ++i)
-	{
-		size_t offs = i * chunkLen;
-		resultTest(data.Current() + offs, chunkLen);
-		}*/
-	std::cout << chunkNum << std::endl;
+	  {
+	  size_t offs = i * chunkLen;
+	  resultTest(data.Current() + offs, chunkLen);
+	  }*/
+	//std::cout << chunkNum << std::endl;
 	if(chunkNum == 1) return;
 	int step = std::min(chunkNum, size_t(wayLen));
 	size_t *upperBound = new size_t[step];
@@ -682,13 +680,13 @@ void multiWayMergeCPU(DoubleBuffer<float> &data, size_t *upperBound,
 void mergeTest(size_t minLen, size_t maxLen, int seed)
 {
 	/*std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
-						std::ios::app);
-	if (rFile.is_open()) 
-		rFile << "cpu merge test results\n"
-			  << boost::format("%1%%|15t|") % "data length"
-			  << boost::format("%1%%|15t|") % "chunk merge"
-			  << boost::format("%1%%|15t|") % "multiway merge"
-			  << std::endl;*/
+	  std::ios::app);
+	  if (rFile.is_open()) 
+	  rFile << "cpu merge test results\n"
+	  << boost::format("%1%%|15t|") % "data length"
+	  << boost::format("%1%%|15t|") % "chunk merge"
+	  << boost::format("%1%%|15t|") % "multiway merge"
+	  << std::endl;*/
 	
 	float *data = new float[maxLen];
 	GenerateData(seed, data, maxLen);
@@ -699,11 +697,11 @@ void mergeTest(size_t minLen, size_t maxLen, int seed)
 		double results[2];
 		hybrid_sort3(data, dataLen, results);
 		/*rFile << boost::format("%1%%|15t|") % dataLen
-			  << boost::format("%1%%|15t|") % results[0]
-			  << boost::format("%1%%|15t|") % results[1]
-			  << std::endl;*/
+		  << boost::format("%1%%|15t|") % results[0]
+		  << boost::format("%1%%|15t|") % results[1]
+		  << std::endl;*/
 		std::cout << "merge test function result: " << results[0] << " "
-		  << results[1] << std::endl;
+				  << results[1] << std::endl;
 	}
 	delete [] data;
 	/*rFile << std::endl << std::endl;

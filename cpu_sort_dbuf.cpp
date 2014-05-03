@@ -598,51 +598,66 @@ void quantileSetCompute(DoubleBuffer<float> &data, size_t *quantileSet,
 						DoubleBuffer<size_t> &bound, const size_t *upperBound,
 						size_t chunkNum, size_t mergeStride, int setLen)
 {
-	//std::cout << setLen << std::endl;
-#pragma omp parallel
+	/*#pragma omp parallel
+	  {
+	  #pragma omp single
+	  {
+	  int bulk = 16, n = 0;
+	  while(n < setLen)
+	  {
+	  int temp = std::min(bulk, setLen - n);
+	  #pragma omp task
+	  {
+	  int w = omp_get_thread_num();
+	  DoubleBuffer<size_t> bnd(bound.buffers[0] + w * chunkNum,
+	  bound.buffers[1] + w * chunkNum);
+	  if(n)
+	  {
+	  DoubleBuffer<size_t> qtl(quantileSet,
+	  quantileSet + n * chunkNum);
+	  quantileCompute(data.Current(), qtl, bnd, upperBound,
+	  chunkNum, n * mergeStride, true);
+	  }
+	  int x = temp - (n < (setLen - temp));
+	  for (int i = 0, j = n * chunkNum; i < x; ++i, j += chunkNum)
+	  {
+	  DoubleBuffer<size_t> quantile(quantileSet + j,
+	  quantileSet + j+chunkNum);
+	  //TODO:may move these initialization into quantile
+	  //compute function?
+	  std::copy(quantile.buffers[0],
+	  quantile.buffers[0] + chunkNum,
+	  quantile.buffers[1]);
+	  quantileCompute(data.Current(), quantile, bnd,
+	  upperBound, chunkNum, mergeStride);
+	  }
+	  }
+	  n += temp;
+	  }
+	  }
+	  }*/
+	int bulk = 16;
+#pragma omp parallel for schedule(dynamic)
+	for(int i = 0; i < setLen; i += bulk)
 	{
-		#pragma omp single
+		int w = omp_get_thread_num();
+		DoubleBuffer<size_t> bnd(bound.buffers[0] + w * chunkNum,
+								 bound.buffers[1] + w * chunkNum);
+		if(i)
 		{
-			int bulk = 8, n = 0;
-			while(n < setLen)
-			{
-				int temp = std::min(bulk, setLen - n);
-				//std::cout << n << " " << temp << std::endl;
-				//#pragma omp task
-				{
-					int w = omp_get_thread_num();
-					//std::cout << w << std::endl;
-					DoubleBuffer<size_t> bnd(bound.buffers[0] + w * chunkNum,
-											 bound.buffers[1] + w * chunkNum);
-					if(n)
-					{
-						DoubleBuffer<size_t> qtl(quantileSet,
-												 quantileSet + n * chunkNum);
-						/*if(n)
-							std::copy(quantileSet, quantileSet + chunkNum,
-							qtl.buffers[0]);*/
-						quantileCompute(data.Current(), qtl, bnd, upperBound,
-										chunkNum, n * mergeStride, true);
-						/*std::copy(qtl.buffers[1], qtl.buffers[1] + chunkNum,
-						  qtl.buffers[0]);*/
-						//std::cout << "non zero start computation complete.\n";
-					}
-					for (int i = 0, j = n * chunkNum; i < temp;
-						 ++i, j += chunkNum)
-					{
-						DoubleBuffer<size_t> quantile(quantileSet + j,
-													  quantileSet + j+chunkNum);
-						//TODO:may move these initialization into quantile
-						//compute function?
-						std::copy(quantile.buffers[0],
-								  quantile.buffers[0] + chunkNum,
-								  quantile.buffers[1]);
-						quantileCompute(data.Current(), quantile, bnd,
-										upperBound, chunkNum, mergeStride);
-					}
-				}
-				n += temp;
-			}
+			DoubleBuffer<size_t> qtl(quantileSet, quantileSet + i * chunkNum);
+			quantileCompute(data.Current(), qtl, bnd, upperBound, chunkNum,
+							i * mergeStride, true);
+		}
+		int x = bulk - (i < (setLen - bulk));
+		for(int j = 0, k = i * chunkNum; j < x; ++j, k += chunkNum)
+		{
+			DoubleBuffer<size_t> quantile(quantileSet + k,
+										  quantileSet + k + chunkNum);
+			std::copy(quantile.buffers[0], quantile.buffers[0] + chunkNum,
+					  quantile.buffers[1]);
+			quantileCompute(data.Current(), quantile, bnd, upperBound, chunkNum,
+							mergeStride);
 		}
 	}
 }

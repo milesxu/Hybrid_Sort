@@ -48,6 +48,7 @@ struct hybridDispatchParams3
 	size_t gpuPart;
 	size_t cpuPart;
 	int threads;
+	int medianFactor;
 	/*size_t multiwayBlockSize;
 	  size_t gpuMergeLen;
 	  size_t gpuMultiwayLen;*/
@@ -97,6 +98,7 @@ struct hybridDispatchParams3
 			gpuChunkLen > 0 ? std::min(gpuChunkLen, baseChunkLen) : dataLen;
 		cpuPart = dataLen - gpuPart;
 		cpuBlockLen = cpuChunkLen / threads;
+		medianFactor = 4;
 	}
 	
 	hybridDispatchParams3(size_t dataLen, size_t gpuPartLen)
@@ -109,6 +111,7 @@ struct hybridDispatchParams3
 		cpuPart = dataLen - gpuPartLen;
 		cpuChunkLen = std::min(baseChunkLen, cpuPart);
 		cpuBlockLen = cpuChunkLen / threads;
+		medianFactor = 4;
 	}
 };
 
@@ -131,7 +134,7 @@ int main(int argc, char **argv)
 	args.GetCmdLineArgument("s", seed);
 	args.DeviceInit();
 	//hybrid_sort_test(1<<16, 1<<30, seed);
-	mergeTest(1<<23, 1<<28, seed);
+	mergeTest(1<<16, 1<<30, seed);
 	//multiWayTest(1<<16, 1<<28, seed);
 	//multiWayTestMedian(1<<20, 1<<23, seed);
 	/*float *data = new float[dataLen];
@@ -496,6 +499,7 @@ void chunkMerge(DoubleBuffer<float> &data, hybridDispatchParams3<float> &params,
 void medianMerge(DoubleBuffer<float> &data, hybridDispatchParams3<float> &params)
 {
 	int chunkNum = params.cpuPart / params.cpuChunkLen;
+	if(chunkNum > params.medianFactor) return;
 	size_t stride = params.cpuChunkLen << 1;
 	while (chunkNum > 1)
 	{
@@ -546,12 +550,6 @@ void multiWayMergeSet(DoubleBuffer<float> &data, size_t *upperBound,
 void multiWayMergeRecursion(DoubleBuffer<float> &data, size_t chunkLen,
 							size_t chunkNum, size_t blockLen, int wayLen = 16)
 {
-	/*for (size_t i = 0; i < chunkNum; ++i)
-	  {
-	  size_t offs = i * chunkLen;
-	  resultTest(data.Current() + offs, chunkLen);
-	  }*/
-	//std::cout << chunkNum << std::endl;
 	if(chunkNum == 1) return;
 	int step = std::min(chunkNum, size_t(wayLen));
 	size_t *upperBound = new size_t[step];
@@ -562,7 +560,6 @@ void multiWayMergeRecursion(DoubleBuffer<float> &data, size_t chunkLen,
 	for(int i = 0; i < chunkNum; i += step)
 	{
 		std::fill(upperBound, upperBound + step, chunkLen);
-		//std::cout << offset << std::endl;
 		upperBound[0] += offset;
 		std::partial_sum(upperBound, upperBound + step, upperBound);
 		//TODO: initial of first array of quantile must all move into quantile
@@ -574,7 +571,6 @@ void multiWayMergeRecursion(DoubleBuffer<float> &data, size_t chunkLen,
 		std::copy(quantileSet + chunkNum * blockNum,
 				  quantileSet + chunkNum * blockNum + chunkNum, quantileSet);
 		offset += stride;
-		//std::cout << offset << std::endl;
 	}
 	delete [] upperBound;
 	delete [] quantileSet;
@@ -586,6 +582,7 @@ void mergeStep3(DoubleBuffer<float> &data, hybridDispatchParams3<float> &params,
 				int wayLen = 8)
 {
 	size_t chunkNum = params.cpuPart / params.cpuChunkLen;
+	if(chunkNum <= params.medianFactor) return;
 	multiWayMergeRecursion(data, params.cpuChunkLen, chunkNum,
 						   params.cpuBlockLen);
 }
@@ -599,11 +596,11 @@ void hybrid_sort3(float *data, size_t dataLen, double (&results)[2])
 	
 	hybridDispatchParams3<float> params(dataLen, 0);
 	chunkMerge(hdata, params);
-	//medianMerge(hdata, params);
+	medianMerge(hdata, params);
 	mergeStep3(hdata, params);
 	resultTest(hdata.Current(), dataLen);
 	
-	const int test_time = 5;
+	const int test_time = 1;
 	double cmerge = 0.0, mmerge = 0.0;
 	for (int i = 0; i < test_time; ++i)
 	{
@@ -613,10 +610,10 @@ void hybrid_sort3(float *data, size_t dataLen, double (&results)[2])
 		double start, end;
 		start = omp_get_wtime();
 		chunkMerge(hdata, params);
+		medianMerge(hdata, params);
 		end = omp_get_wtime();
 		cmerge += (end - start);
 		start = omp_get_wtime();
-		//medianMerge(hdata, params);
 		mergeStep3(hdata, params);
 		end = omp_get_wtime();
 		mmerge += (end - start);
@@ -679,14 +676,14 @@ void multiWayMergeCPU(DoubleBuffer<float> &data, size_t *upperBound,
 
 void mergeTest(size_t minLen, size_t maxLen, int seed)
 {
-	/*std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
-	  std::ios::app);
-	  if (rFile.is_open()) 
-	  rFile << "cpu merge test results\n"
-	  << boost::format("%1%%|15t|") % "data length"
-	  << boost::format("%1%%|15t|") % "chunk merge"
-	  << boost::format("%1%%|15t|") % "multiway merge"
-	  << std::endl;*/
+	std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
+						std::ios::app);
+	if (rFile.is_open()) 
+		rFile << "cpu merge test results\n"
+			  << boost::format("%1%%|15t|") % "data length"
+			  << boost::format("%1%%|15t|") % "chunk merge"
+			  << boost::format("%1%%|15t|") % "multiway merge"
+			  << std::endl;
 	
 	float *data = new float[maxLen];
 	GenerateData(seed, data, maxLen);
@@ -697,9 +694,9 @@ void mergeTest(size_t minLen, size_t maxLen, int seed)
 		double results[2];
 		hybrid_sort3(data, dataLen, results);
 		/*rFile << boost::format("%1%%|15t|") % dataLen
-		  << boost::format("%1%%|15t|") % results[0]
-		  << boost::format("%1%%|15t|") % results[1]
-		  << std::endl;*/
+			  << boost::format("%1%%|15t|") % results[0]
+			  << boost::format("%1%%|15t|") % results[1]
+			  << std::endl;*/
 		std::cout << "merge test function result: " << results[0] << " "
 				  << results[1] << std::endl;
 	}

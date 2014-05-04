@@ -636,7 +636,8 @@ void quantileSetCompute(DoubleBuffer<float> &data, size_t *quantileSet,
 	  }
 	  }
 	  }*/
-	int bulk = 16;
+	//int bulk = 16;
+	int bulk = setLen / 8;
 #pragma omp parallel for schedule(dynamic)
 	for(int i = 0; i < setLen; i += bulk)
 	{

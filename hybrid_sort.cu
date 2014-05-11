@@ -47,6 +47,7 @@ struct hybridDispatchParams3
 	size_t cpuBlockLen;
 	size_t gpuPart;
 	size_t cpuPart;
+	size_t multiWayUpdate;
 	int threads;
 	int medianFactor;
 	/*size_t multiwayBlockSize;
@@ -59,46 +60,61 @@ struct hybridDispatchParams3
 	{
 		threads = omp_get_max_threads();
 		size_t baseChunkLen = lastPower2(cacheSizeInByte3() / (2 * sizeof(T)));
+		multiWayUpdate = 0;
+		medianFactor = 4;
 		//TODO: when GPU global memory fewer than the half of dataLen?
 		//TODO: other way to cut data lists to more fit in capacity of GPU
 		//TODO: to find a more portable solution
-		if (dataLen < baseChunkLen)
+		if (dataLen <= baseChunkLen)
 		{
-			gpuChunkLen = 0;
 			gpuPart = 0;
 		}
-		else if (dataLen < 1 << 26)
-		{
-			gpuChunkLen = dataLen >> 1;
+		else if(dataLen < 1<<23)
 			gpuPart = dataLen >> 1;
-		}
-		else if (dataLen < 1 << 28)
+		else if (dataLen < 1 << 27)
 		{
-			gpuChunkLen = (dataLen >> 2) * 3;
-			gpuPart = gpuChunkLen;
-		}
-		else if (dataLen == 1 << 28)
-		{
-			gpuChunkLen = dataLen >> 2;
-			gpuPart = gpuChunkLen * 3;
-		}
-		else //if (dataLen < 1 << 30)
-		{
-			gpuChunkLen = 1 << 27;
+			//gpuPart = dataLen >> 1;
 			gpuPart = (dataLen >> 2) * 3;
 		}
-		/*else
-		  {
-		  gpuChunkLen = 1 << 27;
-		  gpuPart = gpuChunkLen * 7;
-		  }*/
-		/*gpuChunkLen =
-		  dataLen < baseChunkLen ? 0 : std::min(dataLen >> 1, 1 << 27);*/
+		// else if (dataLen < 1 << 28)
+		// {
+		// 	//gpuChunkLen = (dataLen >> 2) * 3;
+		// 	gpuPart = (dataLen >> 2) * 3;
+		// }
+		else if (dataLen == 1 << 28)
+		{
+			gpuPart = (dataLen >> 3) * 7;
+		}
+		else if(dataLen < 1 << 30)
+		{
+			gpuPart = (dataLen >> 2) * 3;
+		}
+		else
+		{
+			gpuPart = (dataLen >> 3) * 7;
+		}
+		gpuChunkLen = std::min(size_t(1 << 27), gpuPart);
+		if(gpuChunkLen == 1<<27 && gpuPart < gpuChunkLen << 1) gpuChunkLen = gpuPart >> 1;
+		cpuPart = dataLen - gpuPart;
+		if(dataLen < 1 << 23)
+			multiWayUpdate = gpuPart;
+		else if(dataLen == 1<<23)
+			multiWayUpdate = (dataLen >> 1);
+		else if(dataLen <= 1<<25)
+			multiWayUpdate = (dataLen >> 4) * 11;
+		else if(dataLen < 1 << 27)
+			//multiWayUpdate = dataLen >> 2;
+			multiWayUpdate = dataLen >> 1;
+		else if(dataLen == 1 << 28)
+			multiWayUpdate = (dataLen >> 3) * 5;
+		else if(dataLen < 1 << 30)
+			multiWayUpdate =  dataLen >> 1;
+		else
+			multiWayUpdate = (dataLen >> 3) * 5;
 		cpuChunkLen =
 			gpuChunkLen > 0 ? std::min(gpuChunkLen, baseChunkLen) : dataLen;
-		cpuPart = dataLen - gpuPart;
 		cpuBlockLen = cpuChunkLen / threads;
-		medianFactor = 4;
+		std::cout << "gpupart: " << gpuPart << " gpuchunk: " << gpuChunkLen << std::endl;
 	}
 	
 	hybridDispatchParams3(size_t dataLen, size_t gpuPartLen)
@@ -133,8 +149,8 @@ int main(int argc, char **argv)
 	args.GetCmdLineArgument("l", dataLen);
 	args.GetCmdLineArgument("s", seed);
 	args.DeviceInit();
-	//hybrid_sort_test(1<<16, 1<<30, seed);
-	mergeTest(1<<16, 1<<30, seed);
+	hybrid_sort_test(1<<16, 1<<30, seed);
+	//mergeTest(1<<16, 1<<30, seed);
 	//multiWayTest(1<<16, 1<<28, seed);
 	//multiWayTestMedian(1<<20, 1<<23, seed);
 	/*float *data = new float[dataLen];
@@ -302,6 +318,12 @@ void gpu_sort(DoubleBuffer<float> &data, hybridDispatchParams3<float> &params,
 void multiWayMergeGPU(DoubleBuffer<float> &data, size_t *upperBound,
 					  int chunkNum, hybridDispatchParams3<float> &params)
 {
+	if(params.multiWayUpdate == params.gpuPart) return;
+	size_t gpuLen = params.gpuPart - params.multiWayUpdate;
+	size_t chunkLen = std::min(params.gpuChunkLen, gpuLen);
+	//TODO:generalize
+	if(gpuLen == 1<<27) chunkLen = 1 << 27;
+	//std::cout << gpuLen << " " << chunkLen << std::endl;
 	size_t *quantileStart = new size_t[chunkNum];
 	size_t *quantileEnd = new size_t[chunkNum];
 	size_t *loopUBound = new size_t[chunkNum];
@@ -313,26 +335,26 @@ void multiWayMergeGPU(DoubleBuffer<float> &data, size_t *upperBound,
 	//TODO:in quantilecompute function, whether startoffset is 0 must be
 	//checked.
 	quantileCompute(data.buffers[data.selector], quantile, bound, upperBound,
-					chunkNum, params.cpuPart, true);
+					chunkNum, params.cpuPart + params.multiWayUpdate, true);
 	std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
 			  quantile.buffers[0]);
     cub::DoubleBuffer<float> d_keys;
 	//must use false there, because we need actively free all cached memory.
     cub::CachingDeviceAllocator cda(false);
-    cda.DeviceAllocate((void**) &d_keys.d_buffers[0],
-					   sizeof(float) * params.gpuChunkLen);
-    cda.DeviceAllocate((void**) &d_keys.d_buffers[1],
-					   sizeof(float) * params.gpuChunkLen);
+    cda.DeviceAllocate((void**) &d_keys.d_buffers[0], sizeof(float) * chunkLen);
+    cda.DeviceAllocate((void**) &d_keys.d_buffers[1], sizeof(float) * chunkLen);
     void *d_temp_storage = NULL;
     size_t temp_storage_bytes = 0;
 	cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes, d_keys,
-								   params.gpuChunkLen);
+								   chunkLen);
 	cda.DeviceAllocate(&d_temp_storage, temp_storage_bytes);
-	float *ptrOut = data.buffers[data.selector ^ 1] + params.cpuPart;
-	for (size_t i = 0; i < params.gpuPart; i += params.gpuChunkLen)
+	float *ptrOut =
+		data.buffers[data.selector ^ 1] + params.cpuPart + params.multiWayUpdate;
+	//TODO:may need while loop, because chunklen is not equally parted.
+	for (size_t i = 0; i < gpuLen; i += chunkLen)
 	{
 		quantileCompute(data.Current(), quantile, bound, upperBound, chunkNum,
-						params.gpuChunkLen);
+						chunkLen);
 		size_t tempLen = 0;
 		for (int j = 0; j < chunkNum; ++j)
 		{
@@ -343,11 +365,10 @@ void multiWayMergeGPU(DoubleBuffer<float> &data, size_t *upperBound,
 			tempLen += len;
 		}
 		cudaMemsetAsync(d_keys.d_buffers[d_keys.selector ^ 1], 0,
-						sizeof(float) * params.gpuChunkLen);
+						sizeof(float) * chunkLen);
 		cub::DeviceRadixSort::SortKeys(d_temp_storage, temp_storage_bytes,
-									   d_keys, params.gpuChunkLen);
-		cudaMemcpyAsync(ptrOut + i, d_keys.Current(),
-						sizeof(float) * params.gpuChunkLen,
+									   d_keys, chunkLen);
+		cudaMemcpyAsync(ptrOut + i, d_keys.Current(), sizeof(float) * chunkLen,
 						cudaMemcpyDeviceToHost);
 		std::copy(quantile.buffers[1], quantile.buffers[1] + chunkNum,
 				  quantile.buffers[0]);
@@ -630,42 +651,65 @@ void hybrid_sort3(float *data, size_t dataLen, double (&results)[2])
 void multiWayMergeCPU(DoubleBuffer<float> &data, size_t *upperBound,
 					  size_t chunkNum, hybridDispatchParams3<float> params)
 {
+	size_t cpumulti = params.cpuPart + params.multiWayUpdate;
+	size_t blockNum = cpumulti / params.cpuBlockLen;
+	//std::cout << cpumulti << " " << blockNum << std::endl;
     size_t *loopUBound = new size_t[chunkNum * params.threads];
     size_t *loopLBound = new size_t[chunkNum * params.threads];
 	DoubleBuffer<size_t> bound(loopLBound, loopUBound);
-	size_t *quantileSet = new size_t[chunkNum * (params.threads + 1)];
+	size_t *quantileSet = new size_t[chunkNum * (blockNum + 1)];
 	//TODO: initial of first array of quantile must all move into quantile
 	//compute functions.
 	quantileSet[0] = 0;
 	std::copy(upperBound, upperBound + chunkNum - 1, quantileSet + 1);
+	quantileSetCompute(data, quantileSet, bound, upperBound, chunkNum,
+					   params.cpuBlockLen, blockNum);
 	float *mwBuffer = (float*)_mm_malloc(params.cpuChunkLen * sizeof(float), 16);
 	float **start = new float*[chunkNum * params.threads];
 	float **end   = new float*[chunkNum * params.threads];
-	for(size_t i  = 0; i < params.cpuPart; i += params.cpuChunkLen)
-	{
-		quantileSetCompute(data, quantileSet, bound, upperBound, chunkNum,
-						   params.cpuBlockLen, params.threads);
-		//synchronize problem is the reason that parallel for loop cannot be
-		//used. otherwise multi-thread may sort data in same position. this
-		//version use static temp buffer for each thread to solve the problem,
-		//which may not be best performance.
-		//TODO: try circular buffer and/or parallel task to get the best
-		//perfomance solution.
+	/*for(size_t i = 0; i < (blockNum + 1); ++i)
+	  {
+	  size_t index = i * chunkNum;
+	  bool outofb = false;
+	  for(size_t j = 0; j < chunkNum; ++j)
+	  {
+	  if(quantileSet[index + j] > (params.cpuPart + params.gpuPart))
+	  {
+	  outofb = true;
+	  break;
+	  }
+	  }
+	  if(outofb)
+	  {
+	  for(size_t j = 0; j < chunkNum; ++j)
+	  std::cout << quantileSet[index + j] << " ";
+	  }
+	  }*/
+	//std::cout << "quantile set compute complete.\n";
+	//synchronize problem is the reason that parallel for loop cannot be
+	//used. otherwise multi-thread may sort data in same position. this
+	//version use static temp buffer for each thread to solve the problem,
+	//which may not be best performance.
+	//TODO: try circular buffer and/or parallel task to get the best
+	//perfomance solution.
 #pragma omp parallel for schedule(dynamic)
-		for(size_t j = 0; j < params.threads; ++j)
-		{
-			std::vector<float> unalignVec;
-			size_t bOffset = j * params.cpuBlockLen;
-			size_t cOffset = j * chunkNum;
-			DoubleBuffer<size_t> quantile(quantileSet + cOffset,
-										  quantileSet + cOffset + chunkNum);
-			multiWayMergeBitonic(data, chunkNum, mwBuffer + bOffset, i + bOffset,
-								 quantile, unalignVec, start + cOffset,
-								 end + cOffset);
-		}
-		std::copy(quantileSet + chunkNum * params.threads,
-				  quantileSet + chunkNum * (params.threads + 1), quantileSet);
+	for(size_t j = 0; j < blockNum; ++j)
+	{
+		int w = omp_get_thread_num();
+		std::vector<float> unalignVec;
+		DoubleBuffer<size_t> quantile(quantileSet + j * chunkNum,
+									  quantileSet + j * chunkNum + chunkNum);
+		//std::cout << j << std::endl;
+		/*std::cout << quantile.buffers[0][0] << " " << quantile.buffers[0][1]
+				  << " " << quantile.buffers[0][2] << std::endl
+				  << quantile.buffers[1][0] << " " << quantile.buffers[1][1]
+				  << " " << quantile.buffers[1][2] << std::endl;*/
+		multiWayMergeBitonic(data, chunkNum, mwBuffer + w * params.cpuBlockLen,
+							 j * params.cpuBlockLen, quantile, unalignVec,
+							 start + w * chunkNum, end + w * chunkNum);
 	}
+	/*std::copy(quantileSet + chunkNum * params.threads,
+	  quantileSet + chunkNum * (params.threads + 1), quantileSet);*/
 	delete [] loopUBound;
 	delete [] loopLBound;
 	delete [] quantileSet;
@@ -719,9 +763,15 @@ void hybridMergeStep(DoubleBuffer<float> &data,
 			{
 				if (params.gpuPart)
 				{
+					/*double x, y;
+					  x = omp_get_wtime();*/
 					int selector = 0;
-					updateSelectorGeneral(selector, 8, params.cpuPart);
+					updateSelectorMultiWay(selector, 8, params.cpuChunkLen,
+										   params.cpuPart);
 					gpu_sort(data, params, 0, selector);
+					/*y = omp_get_wtime();
+					std::cout << "gpu in hybrid merge: " << (y - x)
+					<< std::endl;*/
 				}
 			}
 #pragma omp section
@@ -729,6 +779,7 @@ void hybridMergeStep(DoubleBuffer<float> &data,
 				mergeStep2(data, 0, params);
 				chunkMerge(data, params, params.cpuChunkLen);
 				medianMerge(data, params);
+				mergeStep3(data, params);
 			}
 		}
 	}
@@ -744,8 +795,7 @@ void hybridMergeStep(DoubleBuffer<float> &data,
 void hybridMultiWayStep(DoubleBuffer<float> &data, size_t *upperBound,
 						size_t chunkNum, hybridDispatchParams3<float> &params)
 {
-	//until now, this check is enough.
-	if(chunkNum == 1) return;
+	//std::cout << "hybrid multiway step begin\n";
 #pragma omp parallel 
 	{
 		omp_set_nested(1);
@@ -753,19 +803,19 @@ void hybridMultiWayStep(DoubleBuffer<float> &data, size_t *upperBound,
 		{
 #pragma omp section
 			{
-				double x, y;
-				x = omp_get_wtime();
+				/*double x, y;
+				  x = omp_get_wtime();*/
 				multiWayMergeGPU(data, upperBound, chunkNum, params);
-				y = omp_get_wtime();
-				std::cout << "gpu in hybrid multiway: " << (y - x) << std::endl;
+				/*y = omp_get_wtime();
+				std::cout << "gpu in hybrid multiway: " << (y - x) << std::endl;*/
 			}
 #pragma omp section
 			{
-				double x, y;
-				x = omp_get_wtime();
+				/*double x, y;
+				  x = omp_get_wtime();*/
 				multiWayMergeCPU(data, upperBound, chunkNum, params);
-				y = omp_get_wtime();
-				std::cout << "cpu in hybrid multiway: " << (y - x) << std::endl;
+				/*y = omp_get_wtime();
+				  std::cout << "cpu in hybrid multiway: " << (y - x) << std::endl;*/
 			}
 		}
 	}
@@ -781,15 +831,17 @@ void hybrid_sort(float *data, size_t dataLen)
 	DoubleBuffer<float> hdata(dataIn, dataOut);
 	hybridDispatchParams3<float> params(dataLen);
 	hybridMergeStep(hdata, params);
-	int chunkNum =
-		params.gpuPart ? (params.gpuPart / params.gpuChunkLen + 1) : 1;
-	size_t *upperBound = new size_t[chunkNum];
-	upperBound[0] = params.cpuPart;
-	std::fill(upperBound + 1, upperBound + chunkNum, params.gpuChunkLen);
-	std::partial_sum(upperBound, upperBound + chunkNum, upperBound);
-	hybridMultiWayStep(hdata, upperBound, chunkNum, params);
+	if (params.gpuPart)
+	{
+		int chunkNum = params.gpuPart / params.gpuChunkLen + 1;
+		size_t *upperBound = new size_t[chunkNum];
+		upperBound[0] = params.cpuPart;
+		std::fill(upperBound + 1, upperBound + chunkNum, params.gpuChunkLen);
+		std::partial_sum(upperBound, upperBound + chunkNum, upperBound);
+		hybridMultiWayStep(hdata, upperBound, chunkNum, params);
+		delete [] upperBound;
+	} 
 	resultTest(hdata.Current(), dataLen);
-	delete [] upperBound;
 	_mm_free(dataIn);
 	_mm_free(dataOut);
 }
@@ -808,20 +860,30 @@ void hybrid_sort_test(size_t minLen, size_t maxLen, int seed)
 	hybridMergeStep(hdata, params);
 	y = omp_get_wtime();
 	std::cout << "hybrid merge: " << (y - x) << std::endl;
-	int chunkNum =
-		params.gpuPart ? (params.gpuPart / params.gpuChunkLen + 1) : 1;
-	size_t *upperBound = new size_t[chunkNum];
-	upperBound[0] = params.cpuPart;
-	std::fill(upperBound + 1, upperBound + chunkNum, params.gpuChunkLen);
-	std::partial_sum(upperBound, upperBound + chunkNum, upperBound);
-	x = omp_get_wtime();
-	hybridMultiWayStep(hdata, upperBound, chunkNum, params);
-	y = omp_get_wtime();
-	std::cout << "hybrid multiway: " << (y - x) << std::endl;
+	/*resultTest(hdata.Current(), params.cpuPart);
+	resultTest(hdata.Current() + params.cpuPart, params.gpuChunkLen);
+	resultTest(hdata.Current() + params.cpuPart + params.gpuChunkLen, params.gpuChunkLen);
+	resultTest(hdata.buffers[hdata.selector ^ 1] + params.cpuPart, params.gpuChunkLen);
+	resultTest(hdata.buffers[hdata.selector ^ 1] + params.cpuPart + params.gpuChunkLen, params.gpuChunkLen);*/
+	if(params.gpuPart)
+	{
+		int chunkNum = params.gpuPart / params.gpuChunkLen + 1;
+		std::cout << "chunk num: " << chunkNum << std::endl;
+		size_t *upperBound = new size_t[chunkNum];
+		upperBound[0] = params.cpuPart;
+		std::fill(upperBound + 1, upperBound + chunkNum, params.gpuChunkLen);
+		std::partial_sum(upperBound, upperBound + chunkNum, upperBound);
+		x = omp_get_wtime();
+		hybridMultiWayStep(hdata, upperBound, chunkNum, params);
+		y = omp_get_wtime();
+		std::cout << "hybrid multiway: " << (y - x) << std::endl;
+		delete [] upperBound;
+	}
 	resultTest(hdata.Current(), maxLen);
-	delete [] upperBound;
+	std::cout << "cpu multiway result: ";
+	resultTest(hdata.Current(), params.cpuPart + params.multiWayUpdate);
 	
-	/*std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
+	std::ofstream rFile("/home/aloneranger/source_code/Hybrid_Sort/result.txt",
 						std::ios::app);
 	if (rFile.is_open()) 
 		rFile << "hybrid sort results: " << std::endl
@@ -829,7 +891,7 @@ void hybrid_sort_test(size_t minLen, size_t maxLen, int seed)
 			  << boost::format("%1%%|15t|") % "merge step"
 			  << boost::format("%1%%|15t|") % "multiway step"
 			  << std::endl;
-			  
+	
 	for(size_t dataLen = minLen; dataLen <= maxLen; dataLen <<= 1)
 	{
 		int test_time = 50;
@@ -851,7 +913,7 @@ void hybrid_sort_test(size_t minLen, size_t maxLen, int seed)
 			end = omp_get_wtime();
 			hmerge += (end - start);
 			start = omp_get_wtime();
-			hybridMultiWayStep(hdata, uBound, cnum, pm);
+			if(pm.gpuPart) hybridMultiWayStep(hdata, uBound, cnum, pm);
 			end = omp_get_wtime();
 			hmulti += (end - start);
 		}
@@ -861,10 +923,11 @@ void hybrid_sort_test(size_t minLen, size_t maxLen, int seed)
 			  << boost::format("%1%%|15t|") % (hmulti / test_time)
 			  << std::endl;
 		delete [] uBound;
+		//std::cout << "hmerge: " << hmerge << " hmulti: " << hmulti << std::endl;
 		std::cout << dataLen << " test complete." << std::endl;
 	}
 	rFile << std::endl << std::endl;
-	rFile.close();*/
+	rFile.close();
 	_mm_free(dataIn);
 	_mm_free(dataOut);
 	delete [] data;

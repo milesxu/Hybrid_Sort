@@ -43,6 +43,8 @@ struct DoubleBuffer
 
 void updateMergeSelector(int &selector, rsize_t dataLen);
 void updateSelectorGeneral(int &selector, size_t startLen, size_t dataLen);
+void updateSelectorMultiWay(int &selector, size_t startLen, size_t chunkLen,
+							size_t dataLen);
 size_t lastPower2(size_t a);
 void mergeSort(DoubleBuffer<float> &data, rsize_t dataLen);
 void mergeSortGeneral(DoubleBuffer<float> &data, rsize_t dataLen);
@@ -84,6 +86,6 @@ void quantileCompute(float *data, DoubleBuffer<rsize_t> &quantile,
 					 DoubleBuffer<rsize_t> &bound, const rsize_t *upperBound,
 					 rsize_t chunkNum, rsize_t quantileLen,
 					 bool initial = false);
-	
+
 #endif /* CPU_SORT_H_ */
 

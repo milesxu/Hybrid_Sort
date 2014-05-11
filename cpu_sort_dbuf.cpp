@@ -313,19 +313,28 @@ size_t getTrailPosition(float *data, size_t bOffset, size_t eOffset, float uValu
 inline void simdMergeLoop2(__m128 *rData, float **dataOut, float **blocks,
 						   float **blockBound, int lanes, int unitLen)
 {
+	//std::cout << "simd merge loop2 begin... " << blockBound[0] - blocks[0] << " " << blockBound[1] - blocks[1] << " " << unitLen << " " << lanes << std::endl;
 	if (blocks[0] != blockBound[0] && blocks[1] != blockBound[1])
 	{
 		int selector = (*(blockBound[0] - unitLen) > *(blockBound[1] - unitLen));
+		//std::cout << *(blockBound[0] - unitLen) << " " << *(blockBound[1] - unitLen) << " " << selector << std::endl;
 		int xors = selector ^ 1;
 		//selected list have higher priority to load data to simd registers.
+		int zeros = 0;
 		while (blocks[selector] != blockBound[selector])
 		{
 			int temps = (*blocks[selector] > *blocks[xors]) ? xors : selector;
+			/*if(blocks[0] == (blockBound[0] - unitLen))
+			  std::cout << *blocks[0] << " " << *blocks[1] << std::endl;*/
+			if(temps == 0) ++zeros;
 			loadData(&blocks[temps], rData, lanes);
 			bitonicSort16232(rData);
 			storeData(dataOut, rData, lanes);
 		}
+		//std::cout << "first block is selected " << zeros << std::endl;
 	}
+	//std::cout << "one list is out..\n";
+	//std::cout << blockBound[0] - blocks[0] << " " << blockBound[1] - blocks[1] << std::endl;
 	int selector = (blocks[0] == blockBound[0]);
 	while (blocks[selector] != blockBound[selector])
 	{
@@ -637,7 +646,8 @@ void quantileSetCompute(DoubleBuffer<float> &data, size_t *quantileSet,
 	  }
 	  }*/
 	//int bulk = 16;
-	int bulk = setLen / 8;
+	int bulk = setLen / 16;
+	if(setLen < 160) bulk = setLen / 8;
 #pragma omp parallel for schedule(dynamic)
 	for(int i = 0; i < setLen; i += bulk)
 	{
@@ -1024,11 +1034,13 @@ void inline simdMergeUnit(DoubleBuffer<float> &block, float **start, float **end
 {
 	size_t startOffset = start[sIdx] - block.buffers[selector];
 	size_t endOffset = end[sIdx + 1] - block.buffers[selector];
+	//std::cout << "offsets: " << startOffset << " " << endOffset << std::endl;
 	simdMergeAlign(block.buffers[selector ^ 1] + startOffset,
 				   &start[sIdx], &end[sIdx]);
 	start[tIdx] = block.buffers[selector ^ 1] + startOffset;
 	end[tIdx] = block.buffers[selector ^ 1] + endOffset;
 	++tIdx;
+	//std::cout << "simd merge unit complete.\n";
 }
 
 void multiWayMergeBitonic(DoubleBuffer<float> &data, size_t chunkNum,
@@ -1039,24 +1051,46 @@ void multiWayMergeBitonic(DoubleBuffer<float> &data, size_t chunkNum,
 {
 	int unitLen = (rArrayLen >> 1) * simdLen;
 	int factornot = ~(unitLen - 1);
+	size_t cLen = 0;
 	for (size_t j = 0; j < chunkNum; ++j)
 	{
 		size_t listLen = quantile.buffers[1][j] - quantile.buffers[0][j];
-		size_t uLen = listLen & factornot;
-		if (uLen < listLen)
-			unalignVec.insert(unalignVec.end(),
-							  data.Current() + quantile.buffers[0][j] + uLen,
-							  data.Current() + quantile.buffers[1][j]);
-		start[j] = data.Current() + quantile.buffers[0][j];
-		end[j] = data.Current() + quantile.buffers[0][j] + uLen;
+		if(listLen)
+		{
+			size_t uLen = listLen & factornot;
+			if (uLen < listLen)
+				unalignVec.insert(unalignVec.end(),
+								  data.Current() + quantile.buffers[0][j] + uLen,
+								  data.Current() + quantile.buffers[1][j]);
+			if(uLen)
+			{
+				start[cLen] = data.Current() + quantile.buffers[0][j];
+				end[cLen] = data.Current() + quantile.buffers[0][j] + uLen;
+				//std::cout << end[cLen] - start[cLen] << " ";
+				++cLen;
+			}
+		}
 	}
+	//std::cout << "\ncLen: " << cLen << std::endl;
 	if (!unalignVec.empty()) insertBinarySortVec(unalignVec);
+	if(cLen == 1)
+	{
+		float *ptrOut = data.buffers[data.selector ^ 1] + startOffset;
+		ptrOut = std::copy(start[0], end[0], ptrOut);
+		if(!unalignVec.empty())
+		{
+			std::copy(unalignVec.begin(), unalignVec.end(), ptrOut);
+			unalignVec.clear();
+		}
+		//std::cout << "copied!\n";
+		return;
+	}
 	DoubleBuffer<float> block(tempBuffer,
 							  data.buffers[data.selector ^ 1] + startOffset);
 	int selector = getMergeStartBuffer(chunkNum, 1);
 	float *ptrIn = block.buffers[selector];
 	size_t cIdx = 0;
-	if(chunkNum & 1)
+	if(cLen & 1)
 	{
 		//In the next loop, other lists will be moved twice. once for load
 		//data, once for sort and move. So data In the odd one must be
@@ -1066,13 +1100,13 @@ void multiWayMergeBitonic(DoubleBuffer<float> &data, size_t chunkNum,
 		++cIdx;
 		ptrIn += (tempIn - block.buffers[selector ^ 1]);
 	}
-	for (size_t j = cIdx; j < chunkNum; j += 2)
+	for (size_t j = cIdx; j < cLen; j += 2)
 	{
 		for (int k = 0; k < 2; ++k)
 			unalignMove(unalignVec, ptrIn, start, end, j + k);
 		simdMergeUnit(block, start, end, j, cIdx, selector);
 	}
-	size_t cLen = cIdx;
+	cLen = cIdx;
 	cIdx = 0;
 	while (cLen > 1)
 	{
@@ -1169,6 +1203,32 @@ void updateSelectorGeneral(int &selector, size_t startLen, size_t dataLen)
 {
 	size_t blocks = dataLen / startLen;
 	if (_tzcnt_u64(blocks) & 1) selector ^= 1;
+}
+
+//TODO:may be generalized. now div must be power of 2.
+void updateSelectorMultiWay(int &selector, size_t startLen, size_t chunkLen,
+							size_t dataLen)
+{
+	size_t div = dataLen / chunkLen;
+	if(div <= 4)
+	{
+		updateSelectorGeneral(selector, startLen, dataLen);
+	}
+	else
+	{
+		updateSelectorGeneral(selector, startLen, chunkLen);
+		//int multit = div / 16 + (div % 16 != 0);
+		/*int multit = div, n = 0;
+		do
+		{
+			if(multit <= 16) multit = 0;
+			else multit /= 16;
+			++n;
+		} while (multit > 0);
+		if(n & 1) selector ^= 1;*/
+		size_t temp = _tzcnt_u64(div);
+		size_t n = temp / 4 + (temp % 4 != 0);
+	}
 }
 
 size_t lastPower2(size_t a)
